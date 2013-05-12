@@ -61,16 +61,16 @@ class GenerateRADGenome(object):
         ID, seq, plus, quals = line.strip().split("\n")
         return (ID, seq, plus, quals)
 
-    def __split_len(self, seq, length):
+    def __split_len__(self, seq, length):
         return [seq[i:i+length] for i in range(0, len(seq), length)]
 
-    def _append_to_pseudo_genome(self, seq, fout, pos, span=80):
+    def _append_to_pseudo_genome_(self, seq, fout, pos, span=80):
 
         if pos + len(seq) > span:
             size = span - pos
 
             chunks = [seq[:size]]
-            chunks += self.__split_len(seq[size:], span)
+            chunks += self.__split_len__(seq[size:], span)
 
             [sys.stdout.write(c+"\n") for c in chunks[:-1]]
             sys.stdout.write(chunks[-1])
@@ -94,10 +94,10 @@ class GenerateRADGenome(object):
                     if id_count != 0:
 
                         seq = current_cluster["S"][0]
-                        previous_pos = self._append_to_pseudo_genome(seq, fout, previous_pos)
+                        previous_pos = self._append_to_pseudo_genome_(seq, fout, previous_pos)
 
                         Ns2add = "N"*Ns
-                        previous_pos = self._append_to_pseudo_genome(Ns2add, fout, previous_pos)
+                        previous_pos = self._append_to_pseudo_genome_(Ns2add, fout, previous_pos)
 
                     current_cluster = collections.defaultdict(list)
                     id_count += 1
