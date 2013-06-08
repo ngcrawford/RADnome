@@ -1,5 +1,5 @@
 
-### Prepare Reads:
+### Prepare reads:
 
 1. Concatenate all reads into merged r1 and r2 files.
 
@@ -22,3 +22,20 @@
 
         rainbow merge -o r1.asm.out -a -i r1.div.out
         rainbow merge -o r2.asm.out -a -i r2.div.out
+
+### Prepare RADnome:
+
+1. Create pseudo-genome with 50 base-pairs of N's as padding between 'contigs'.
+
+    **Example:** [contig1] + [N * 50] + [contig2] + [N * 50] + [contig3] ... etc.
+
+        ./make_RAD_pseudo_genome.py -n 50 -r r1.asm.RADnome r1.asm.out r1.asm.fa
+        ./make_RAD_pseudo_genome.py -n 50 -r r2.asm.RADnome r2.asm.out r2.asm.fa
+
+2. Create bowtie2 indexes.
+
+        bowtie2-build -f /Users/ngcrawford/Dropbox/JMP_CAS/Nick/RADnome/r1.asm.fa r1.asm
+        bowtie2-build -f /Users/ngcrawford/Dropbox/JMP_CAS/Nick/RADnome/r2.asm.fa r2.asm
+
+
+
