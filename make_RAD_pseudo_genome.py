@@ -5,6 +5,7 @@ import sys
 import gzip
 import shlex
 import numpy
+import pysam
 import argparse
 import datetime
 import collections
@@ -175,10 +176,22 @@ class GenerateRADGenome(object):
                     log_file.write("  {0}: {1}\n".format(key, value))
 
 
+    def contigs_2_rad_frags(bam1, bam2):
+
+
+        
+        pass
+
+
+
+
+
 if __name__ == '__main__':
 
     args = get_args()
     G = GenerateRADGenome()
-    G.make_pseudo_genome(args.infile, args.outfile, args.N_padding, args.run_name)
-    G.make_log_file()
+    #G.make_pseudo_genome(args.infile, args.outfile, args.N_padding, args.run_name)
+    #G.make_log_file()
+
+    G.contigs_2_rad_frags(bam1, bam2)
 
