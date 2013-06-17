@@ -1,17 +1,25 @@
+### Prepare work enviroment:
 
-### Setup Directory Structure:
+1. Create directory structure:
 
-Your working directory should look similar to the following. You should run all the coommand
+        mkdir Project_Folder
+        cd Project_Folder
+        mkdir {RADnome,bams,bowtie2,fastqs,rainbow}
 
+    If everything worked correctly, running `tree` should produce the following directory diagram.
 
         Project_Folder
         ├── RADnome
+        ├── bams
         ├── bowtie2
         ├── fastqs
         └── rainbow
 
+2. Move your reads (e.g., fastq files) into the fastq directory.
 
 ### Prepare reads:
+
+Here we have named our fastq file with a sample name and whether they contain the first or second read (e.g., r1 or r2). We use the the file ending fq to indicate that these are fastq files. 
 
 1. Concatenate all reads into merged r1 and r2 files.
 
@@ -35,11 +43,15 @@ Your working directory should look similar to the following. You should run all 
         rainbow merge -o r1.asm.out -a -i r1.div.out
         rainbow merge -o r2.asm.out -a -i r2.div.out
 
+5. At this point we recommend you gzip your fastq files to save space. 
+
+        gzip *.fq
+
 ### Prepare RADnome:
 
 1. Create pseudo-genome with 50 base-pairs of N's as padding between 'contigs'.
 
-    Shorthand Example: [contig1] + [N * 50] + [contig2] + [N * 50] + [contig3] ... etc.
+    *Shorthand Example:* [contig1] + [N * 50] + [contig2] + [N * 50] + [contig3] ... etc.
 
         ./make_RAD_pseudo_genome.py -n 50 -r r1.asm.RADnome r1.asm.out r1.asm.fa
         ./make_RAD_pseudo_genome.py -n 50 -r r2.asm.RADnome r2.asm.out r2.asm.fa
@@ -68,10 +80,23 @@ Your working directory should look similar to the following. You should run all 
         samtools sort bams/r1.bam bams/r1.sorted
         samtools sort bams/r2.bam bams/r2.sorted
 
-    Index bams.
+    Index bams. (This step is not strictly necessary, but it's not a bad idea to have a index around.)
 
-        samtools index r1.sorted.bam 
-        samtools index r2.sorted.bam 
+        samtools index bams/r1.sorted.bam 
+        samtools index bams/r2.sorted.bam 
+
+    Make sorted sams.
+
+        samtools view -h bams/r1.sorted.bam > bams/r1.sorted.sam
+        samtools view -h bams/r2.sorted.bam > bams/r2.sorted.sam
+
+5. Associate contigs using read pairs.
+
+    Index RADnome files.
+
+        samtools faidx RADnome/r1.asm.fa.gz
+        samtools faidx RADnome/r2.asm.fa.gz
+
 
 
 
