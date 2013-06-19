@@ -4,7 +4,7 @@
   <head>
     <meta charset='utf-8' />
     <meta http-equiv="X-UA-Compatible" content="chrome=1" />
-    <meta name="description" content="RADnome : We empower RADtags with PE sequencing " />
+    <meta name="description" content="RADnome : We empower ddRADtags with PE sequencing " />
 
     <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
 
@@ -19,7 +19,7 @@
           <a id="forkme_banner" href="https://github.com/ngcrawford/RADnome">View on GitHub</a>
 
           <h1 id="project_title">RADnome</h1>
-          <h2 id="project_tagline">We empower RADtags with PE sequencing </h2>
+          <h2 id="project_tagline">We empower ddRADtags with PE sequencing </h2>
 
             <section id="downloads">
               <a class="zip_download_link" href="https://github.com/ngcrawford/RADnome/zipball/master">Download this project as a .zip file</a>
@@ -34,12 +34,24 @@
         <h3>
 <a name="welcome-to-radnome" class="anchor" href="#welcome-to-radnome"><span class="octicon octicon-link"></span></a>Welcome to RADnome.</h3>
 
-<p>Some text about RADnome.</p>
+<p>Traditional approaches for analyzing restriction site associated DNA markers (<a href="http://en.wikipedia.org/wiki/Restriction_site_associated_DNA_markers">RADtags</a>) were designed for either single end sequencing or for contigs assembled from single digest RADs. However, new methods using double digest methods (<a href="http://www.plosone.org/article/info:doi/10.1371/journal.pone.0037135">ddRADseq</a> <strong>other paper?</strong>) produce RADs where individual PE reads are non-overlapping.</p>
+
+<p>To address this problem this software independently infers contigs for each R1 and R2 read using <a href="dx.doi.org/10.1093/bioinformatics/bts482">rainbow</a>. Contigs representing read pairs are then associated based on read mapping positions. After contigs are paired, all contigs are merged into a pseudo-genome (= RADnome). Individual samples are then mapped to this RADnome and software packages such as <a href="http://www.broadinstitute.org/gatk/">GATK</a> can be used to identify SNVs.</p>
 
 <h3>
+<a name="contact" class="anchor" href="#contact"><span class="octicon octicon-link"></span></a>Contact</h3>
+
+<ul>
+<li> Email: <strong>some email address</strong>
+</li>
+<li> Twitter: <a href="https://twitter.com/RADnome">RADnome</a>
+</li>
+<li> Github: <a href="https://github.com/ngcrawford/RADnome">github.com/ngcrawford/RADnome</a>
+</li>
+</ul><h3>
 <a name="authors-and-contributors" class="anchor" href="#authors-and-contributors"><span class="octicon octicon-link"></span></a>Authors and Contributors</h3>
 
-<p>This project is primarily maintained by Nicholas Crawford (<a href="https://github.com/ngcrawford" class="user-mention">@ngcrawford</a>) with contributions from Josh Pollock (<a href="https://github.com/iliketurkey" class="user-mention">@iliketurkey</a>) and Brian Simison (<a href="https://github.com/wbsimey" class="user-mention">@wbsimey</a>).</p>
+<p>This project was conceived Brian Simison (<a href="https://github.com/wbsimey" class="user-mention">@wbsimey</a>) and Nicholas Crawford (<a href="https://github.com/ngcrawford" class="user-mention">@ngcrawford</a>) with contributions from Josh Pollock (<a href="https://github.com/iliketurkey" class="user-mention">@iliketurkey</a>).</p>
       </section>
     </div>
 
@@ -51,7 +63,17 @@
       </footer>
     </div>
 
-    
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-41852012-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
 
   </body>
 </html>
