@@ -6,7 +6,7 @@ To address this problem this software independently infers contigs for each R1 a
 
 ### Contact
 
-*  Email: **some email address**
+*  Email: **RADnome@Gmail.com**
 *  Twitter: [RADnome][5]
 *  Github: [github.com/ngcrawford/RADnome][6]
 
