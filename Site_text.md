@@ -12,7 +12,7 @@ To address this problem this software independently infers contigs for each R1 a
 
 
 ### Authors and Contributors
-This project was conceived Brian Simison (@wbsimey) and Nicholas Crawford (@ngcrawford) with contributions from Josh Pollock (@iliketurkey).
+This project was conceived W. Brian Simison (@wbsimey) and Nicholas Crawford (@ngcrawford) with contributions from Josh Pollock (@iliketurkey).
 
 
 [1]: http://en.wikipedia.org/wiki/Restriction_site_associated_DNA_markers
