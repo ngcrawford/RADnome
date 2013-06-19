@@ -166,7 +166,7 @@ class GenerateRADnome(object):
 
         r1 = pysam.Fastafile(rad1)
         r2 = pysam.Fastafile(rad2)
-        fout = open(fout,'w')
+        fout = open(fout, 'w')
 
         c2c = pickle.load(open(contig_2_contig_dict, 'rb'))
 
@@ -203,6 +203,7 @@ class GenerateRADnome(object):
             count += 1
 
         fout.close()
+        self.make_log_file()
 
 
 class SamLine(object):

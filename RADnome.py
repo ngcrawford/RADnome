@@ -23,6 +23,7 @@ import GenerateRADnome
 def generate_READnome(args):
     G = GenerateRADnome.GenerateRADnome()
     G.make_pseudo_genome(args.infile, args.outfile, args.N_padding, args.run_name)
+    G.self.make_log_file(args)
     pass
 
 
@@ -60,8 +61,10 @@ def get_args():
         'RADnome',
         help='Create pseudo-genome for associated contigs.')
 
-
+    # --------------------------------------
     # SETUP READnome SUB-COMMAND
+    # --------------------------------------
+
     parser_readnome.add_argument(
         '-n', '--N-padding',
         type=int,
@@ -86,7 +89,10 @@ def get_args():
         default=sys.stdout,
         help='Path to output. (default is STOUT)')
 
+    # --------------------------------------
     # SETUP RADnome SUB-COMMAND
+    # --------------------------------------
+
     parser_RADnome.add_argument(
         '-n', '--N-padding',
         type=int,
@@ -119,7 +125,7 @@ def get_args():
         help="'Pickled' dictionary from sam_index run.")
 
     parser_RADnome.add_argument(
-        '-cl','--contig-lengths',
+        '-cl', '--contig-lengths',
         type=int,
         nargs=2,
         help="Length of contigs in forward and reverse files. Note that order matters.")
@@ -130,20 +136,22 @@ def get_args():
         default=sys.stdout,
         help='Path to output. (default is STOUT)')
 
+    # --------------------------------------
     # SETUP ascContigs SUB-COMMAND
+    # --------------------------------------
+
     parser_ascContigs.add_argument(
         '-s', '--sams',
         type=str,
         nargs=2,
-        default='Path to file containing start positions.',
         help="Forward and Reverse SAM files. Note that order matters.")
 
     parser_ascContigs.add_argument(
         '-p', '--pos-file',
         type=str,
-        help="Forward and Reverse SAM files. Note that order matters.")
+        help="Path to file containing start positions. Should match first SAM file.")
 
-    # 
+    # RUN APPROPRIATE SUB-COMMAND.
     parser_readnome.set_defaults(func=generate_READnome)
     parser_ascContigs.set_defaults(func=assoicate_contigs)
     parser_RADnome.set_defaults(func=generate_RADnome)
