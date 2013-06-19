@@ -1,8 +1,12 @@
 ### Welcome to RADnome.
 
-Traditional approaches for analyzing restriction site associated DNA markers ([RADtags][1]) were designed for either single end sequencing or for contigs assembled from single digest RADs. However, new methods using double digest methods ([ddRADseq][2] **other paper?**) produce RADs where individual PE reads are non-overlapping.
+Traditional approaches for analyzing restriction site associated DNA markers ([RADtags][1]) were designed for either single end sequencing or for contigs assembled from single digest RADs. However, new methods using double digest methods (e.g., [ddRADseq][2]) produce RADs where individual PE reads are non-overlapping.
 
-To address this problem this software independently infers contigs for each R1 and R2 read using [rainbow][3]. Contigs representing read pairs are then associated based on read mapping positions. After contigs are paired, all contigs are merged into a pseudo-genome (= RADnome). Individual samples are then mapped to this RADnome and software packages such as [GATK][4] can be used to identify SNVs.
+To address this problem this software independently infers contigs for each R1 and R2 read using [rainbow][3]. Contigs representing read pairs are then associated based on read mapping positions. After contigs are paired all contigs are merged into a pseudo-genome (= RADnome). Individual samples are then mapped to this RADnome and software packages such as [GATK][4] can be used to identify SNVs.
+
+## Schedule
+
+RADnome is still in development. However, we expect to have a working pipeline in place by July 1st 2013 at the latest. Follow us on twitter or github and we'll let you know when everything is ready to go. 
 
 ### Contact
 
