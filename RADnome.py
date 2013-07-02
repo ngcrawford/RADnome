@@ -24,19 +24,19 @@ def generate_READnome(args):
     G = GenerateRADnome.GenerateRADnome()
     G.make_pseudo_genome(args.infile, args.outfile, args.N_padding, args.run_name)
     G.self.make_log_file(args)
-    pass
 
 
 def generate_RADnome(args):
     G = GenerateRADnome.GenerateRADnome()
     G.contigs_2_RADnome(args.readnomes[0], args.readnomes[1], args.contig_lengths[0],
-                        args.contig_lengths[1], args.outfile, args.pickle_dict,
-                        args.run_name, args.N_padding, args.insert_size)
-    pass
+                        args.contig_lengths[1], args.pickle_dict,
+                        args.run_name, args.N_padding, args.insert_size,
+                        args.min_proportion_single_locus)
+
 
 def assoicate_contigs(args):
     M = GenerateRADnome.MergeAssemblies()
-    M.associate_contigs(args.sams[0], args.sams[1], args.pos_file)
+    M.associate_contigs(args.sams[0], args.sams[1], args.pos_file, args.minimum_MAPQ)
 
 
 def get_args():
@@ -49,7 +49,7 @@ def get_args():
                                        help='sub-command help')
 
     parser_readnome = subparsers.add_parser(
-        'READnome',
+        'makeREADnome',
         help='Create pseudo-genome from single end reads assembled \
               with Rainbow (Chong 2012).')
 
@@ -58,7 +58,7 @@ def get_args():
         help='Match up contigs based on read mapping.')
 
     parser_RADnome = subparsers.add_parser(
-        'RADnome',
+        'makeRADnome',
         help='Create pseudo-genome for associated contigs.')
 
     # --------------------------------------
@@ -131,10 +131,10 @@ def get_args():
         help="Length of contigs in forward and reverse files. Note that order matters.")
 
     parser_RADnome.add_argument(
-        'outfile',
-        nargs='?',
-        default=sys.stdout,
-        help='Path to output. (default is STOUT)')
+        '-p', '--min-proportion-single-locus',
+        type=float,
+        default=0.8,
+        help="Minimum proportion of reads associated to one locus.")
 
     # --------------------------------------
     # SETUP ascContigs SUB-COMMAND
@@ -151,6 +151,18 @@ def get_args():
         type=str,
         help="Path to file containing start positions. Should match first SAM file.")
 
+    parser_ascContigs.add_argument(
+        '-mapq', '--minimum-MAPQ',
+        type=int,
+        default=3,
+        help="Minimum mapping quality of query and hit.")
+
+    parser_ascContigs.add_argument(
+        '-r', '--run-name',
+        type=str,
+        default='RADnome',
+        help="Name of run. Becomes fasta name.")
+
     # RUN APPROPRIATE SUB-COMMAND.
     parser_readnome.set_defaults(func=generate_READnome)
     parser_ascContigs.set_defaults(func=assoicate_contigs)
@@ -160,4 +172,4 @@ def get_args():
     args.func(args)
     return args
 
-print get_args()
+get_args()

@@ -17,18 +17,122 @@ Add later.
 import os
 import sys
 import gzip
+import math
 import shlex
 import numpy
 import pysam
 import argparse
 import datetime
+import textwrap
 import collections
 import cPickle as pickle
 from fileindex import FileIndex
 from subprocess import Popen, PIPE
 from collections import defaultdict, Counter
 
-class GenerateRADnome(object):
+
+class SamLine(object):
+    def __init__(self, fh):
+
+        line = fh.readline().split("\t") or [None]
+
+        if line[0].startswith("@"):
+            self.qname = "@"
+
+        elif line == ['']:
+            self.qname = None
+
+        else:
+            self.qname = line[0]
+            self.flag = int(line[1])
+            self.rname = line[2]
+            self.pos = int(line[3])
+            self.mapq = int(line[4])
+            self.ciagr = line[5]
+            self.mrnm = line[6]
+            self.mpos = int(line[7])
+            self.tlen = int(line[8])
+
+
+class Logging(object):
+    """Class to hold logging methods."""
+    def __init__(self):
+        super(Logging, self).__init__()
+
+        self.today = datetime.date.today()
+
+    def __associate_contigs_log__(self, results_dict):
+
+        results_dict["prop_asc"] =  float(results_dict["passed_filter"]) / results_dict["total_queries"]
+
+        txt = """\
+        Ran 'ascContigs' on {0[date]}
+
+          Query file: {0[query_sam]}
+          Searched file: {0[searched_sam]}
+          Contig Positions file: {0[contig_positions]}
+          Output Pickle file: {0[pickle]}
+
+          Minimum MAPQ value: {0[min_mapq]}
+
+        Results:
+
+          Total reads processed: {0[total_queries]}
+          Paired reads passing filter: {0[passed_filter]} ( = {0[prop_asc]:%} )
+
+        """.format(results_dict)
+
+        txt = textwrap.dedent(txt)
+
+        outfile = self.today.strftime('ascRADnome..%m%d%y.log')
+        outfile = open(outfile, 'w')
+        outfile.write(txt)
+
+        print txt
+        pass
+
+
+    def __contigs_2_RADnome__(self, results_dict):
+
+        results_dict["mean_unique_asc"] = float(results_dict["unique_associations"]) / results_dict['rad_frag_count']
+        results_dict["mode_diff"] = float(results_dict["mode_diff"]) / results_dict['potential_rad_frags']
+
+        txt = """\
+        Ran 'makeRADnome' as {0[run_name]} on {0[date]}
+
+          R1 file: {0[R1]}
+            contig length: {0[R1_len]} bp
+
+          R2 file: {0[R2]}
+            contig length: {0[R2_len]} bp
+
+          Output File: {0[fout]}
+
+          Minimum proportion of reads contributing to mode: {0[proportion]}
+
+          Padding between RADfrags: {0[N_padding]} bp
+          Padding between R1/R2 contigs: {0[insert_size]} bp
+
+        Basic Stats:
+
+          Tested RADfrags: {0[potential_rad_frags]:g}
+          Total Associated RADfrags: {0[rad_frag_count]}
+          Mean unique associations per RADfrag: {0[mean_unique_asc]:g}
+           (e.g., The mean number of R2 contigs associated with
+            a particular R1 contig.)
+          Mean proportion of reads contributing to mode: {0[mode_diff]:g}
+
+        """.format(results_dict)
+
+        txt = textwrap.dedent(txt)
+
+        outfile = self.today.strftime('makeRADnome.%m%d%y.log')
+        outfile = open(outfile, 'w')
+        outfile.write(txt)
+        pass
+
+
+class GenerateRADnome(Logging):
     """Docstring for GenerateRADGenome"""
     def __init__(self):
         super(GenerateRADnome, self).__init__()
@@ -85,7 +189,7 @@ class GenerateRADnome(object):
         """
 
         rainbow_clustered_fin = self.__open_files__(rainbow_clustered_fin, 'rb')
-    
+
         with rainbow_clustered_fin as fin:
 
             # SETUP COUNTERS, ETC.
@@ -132,104 +236,95 @@ class GenerateRADnome(object):
             fout.close()
             contig_starts_log.close()
 
-    def make_log_file(self):
+    def filter_contigs(self, c, p):
+        """"""
 
-        self.run_info['Input'] = args.infile
-        self.run_info['Output'] = args.outfile
-        self.run_info['Run Name'] = args.run_name
-        self.run_info['Padding (bases)'] = args.N_padding
-        self.run_info['Date'] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        mx = float(c.most_common()[0][1])
+        rmdr = sum([i for k, i in c.most_common()[1:]])
+        diff = 1 - (rmdr / mx)
+        return diff
 
-        with open("{}.log".format(self.run_info['Run Name']), 'w') as log_file:
+    def __get_fasta_header__(self, fasta_path):
+        header_line = open(fasta_path, 'rU').readline()
+        return header_line.strip(">").strip()
 
-            log_file.write("Ran make_RAD_pseudo_genome.py with the following parameters:\n\n")
+    def contigs_2_RADnome(self, rad1, rad2, r1_contig_len, r2_contig_len, contig_2_contig_dict, run_name, N_padding, insert_size, proportion):
 
-            for key in ['Date', 'Run Name', 'Input', 'Output', 'Padding (bases)', 'Total clusters', 'seq_lengths']:
-                value = self.run_info[key]
-                if key is 'seq_lengths':
-                    values = numpy.array(value)
-                    log_file.write("  Mean Seq Length: {0} +/- {1} stdev\n".format(values.mean(), values.std()))
+        run_results = {
+            "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "pickle": contig_2_contig_dict,
+            'R1': rad1,
+            'R1_len': r1_contig_len,
+            'R2': rad2,
+            'R2_len': r2_contig_len,
+            'fout': None,
+            'run_name':run_name,
+            'N_padding': N_padding,
+            "insert_size": insert_size,
+            "proportion": proportion,
+            "rad_frag_count": 0,
+            "potential_rad_frags": 0,
+            "unique_associations": 0,
+            "mode_diff": 0,
+            }
 
-                else:
-                    log_file.write("  {0}: {1}\n".format(key, value))
-
-
-    def filter_contigs(self, mode, total):
-        """Mode must match total."""
-
-        if float(mode[-1]) / len(total) == 1.0:
-            return True
-        else:
-            return False
-
-    def contigs_2_RADnome(self, rad1, rad2, r1_contig_len, r2_contig_len, fout, contig_2_contig_dict, run_name, N_padding, insert_size):
+        r1_name = self.__get_fasta_header__(rad1)
+        r2_name = self.__get_fasta_header__(rad2)
 
         r1 = pysam.Fastafile(rad1)
         r2 = pysam.Fastafile(rad2)
+
+        today = datetime.date.today()
+        fout = run_name + "." + today.strftime('%m%d%y.fa')
+        run_results['fout'] = fout
         fout = open(fout, 'w')
 
         c2c = pickle.load(open(contig_2_contig_dict, 'rb'))
 
         #fout = open('test.PE_RADnome.fa','w')
         count = 0
+        rad_frag_count = 0
         previous_pos = 0
         for key, value in c2c.iteritems():
-            # if count > 10: break
-            if key == 0:           # skip zero key as I think this may be where 'unalignable fragments' get put.
+            run_results["potential_rad_frags"] += 1
+            if key == 0:           # skip zero key as this may be where 'unalignable fragments' get put.
                 continue
-            
-            # CALCULATE MODE    
+
+            # CALCULATE MODE
             counts = collections.Counter(value)
             mode = counts.most_common()[0]
+            run_results['unique_associations'] += len(counts)
 
             # WRITE FASTA HEADER
             if count == 0:
                 fout.write('>{}\n'.format(run_name))
-            
-            if self.filter_contigs(mode, value) is True:
+
+            if self.filter_contigs(counts, proportion) >= proportion:
+
+                run_results["rad_frag_count"] += 1
+                run_results["mode_diff"] += self.filter_contigs(counts, proportion)
 
                 # SETUP DNA FRAGMENTS
                 bigNs = "N" * N_padding
                 smallNs = "N" * insert_size
-                contig1 = r1.fetch("r1.asm.RADnome", key, key+r1_contig_len)
-                contig2 = r2.fetch("r2.asm", mode[0], mode[0]+r2_contig_len)
+                contig1 = r1.fetch(r1_name, key, key+r1_contig_len)
+                contig2 = r2.fetch(r2_name, mode[0], mode[0]+r2_contig_len)
 
                 # ADD FRAGMENTS TO RADNOME
                 previous_pos = self._append_to_pseudo_genome_(bigNs, fout, previous_pos, span=80)
                 previous_pos = self._append_to_pseudo_genome_(contig1, fout, previous_pos, span=80)
                 previous_pos = self._append_to_pseudo_genome_(smallNs, fout, previous_pos, span=80)
                 previous_pos = self._append_to_pseudo_genome_(contig2, fout, previous_pos, span=80)
-      
+
             count += 1
 
         fout.close()
-        self.make_log_file()
+
+        # Send data for logging
+        self.__contigs_2_RADnome__(run_results)
 
 
-class SamLine(object):
-    def __init__(self, fh):
-
-        line = fh.readline().split("\t") or [None]
-
-        if line[0].startswith("@"):
-            self.qname = "@"
-
-        elif line == ['']:
-            self.qname = None
-
-        else:
-            self.qname = line[0]
-            self.flag = int(line[1])
-            self.rname = line[2]
-            self.pos = int(line[3])
-            self.mapq = int(line[4])
-            self.ciagr = line[5]
-            self.mrnm = line[6]
-            self.mpos = int(line[7])
-            self.tlen = int(line[8])
-
-
-class MergeAssemblies(object):
+class MergeAssemblies(Logging):
     """docstring for MergeAssemblies"""
     def __init__(self):
         super(MergeAssemblies, self).__init__()
@@ -250,8 +345,19 @@ class MergeAssemblies(object):
         else:
             return 'unpaired'
 
-    @staticmethod
-    def associate_contigs(sam1, sam2, contig_positions):
+
+    def associate_contigs(self, sam1, sam2, contig_positions, min_mapq):
+
+        run_results = {
+            "total_queries": 0,
+            "passed_filter": 0,
+            "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "min_mapq": min_mapq,
+            "query_sam": sam1,
+            "searched_sam": sam2,
+            "contig_positions": contig_positions,
+            "pickle": None,
+            }
 
         contig_2_contig_dict = defaultdict(list)
 
@@ -277,28 +383,52 @@ class MergeAssemblies(object):
                 query_pos = ma.round_bp_pos(query_pos)     # this could be more sophisticated.
 
                 q_id = q[0][:-1] + "2"                     # create query id (e.g., ends with "2")
-                
+                q_mapq = int(q[4])                         # and, mapping quality.
+
                 if count % 50000 == 0:
                     print count
-                
+
                 # SEARCH FOR QUERY AND PARSE RESULTS
                 for s in fi[q_id]:
-                    hit_pos = ma.get_hit_pos(s)
-                    hit_pos = ma.round_bp_pos(hit_pos)
-                    contig_2_contig_dict[query_pos].append(hit_pos)
 
-        print 'dumping assoications'
-        associations = open('contig_2_contig_associations_dict.pkl', 'wb')
-        pickle.dump(contig_2_contig_dict, associations)
+                    if (q_mapq > min_mapq) and (s.mapq > min_mapq):
+
+                        run_results["passed_filter"] += 1
+
+                        hit_pos = ma.get_hit_pos(s)
+                        hit_pos = ma.round_bp_pos(hit_pos)
+                        contig_2_contig_dict[query_pos].append(hit_pos)
+
+
+        #CREATE PICKLE OUTPUT FILE
+        today = datetime.date.today()
+        pkl_output_file_name = today.strftime('R1_to_R2_contig_associations.%m%d%y.pkl')
+        pkl_out = open(pkl_output_file_name, 'wb')
+        pickle.dump(contig_2_contig_dict, pkl_out)
+
+        # UPDATE RUN RESULTS AND GENERATE LOGFILE
+        run_results["total_queries"] = count
+        run_results['pickle'] = pkl_output_file_name
+        self.__associate_contigs_log__(run_results)        # format logging results
 
 
 if __name__ == '__main__':
 
-
-
     queries = 'r1.sorted.sam'
-    sam = 'r2.sorted.sam'
+    sam2 = '/home/ngcrawford/Data/Nearctic_Turtles/sams/neartic.trachemys.2.sam'
     contig_positions = "r1.asm.contig_start_pos.txt"
+
+
+    fi = FileIndex(sam2, SamLine, allow_multiple=True)
+    ma = MergeAssemblies()
+
+
+    z = fi["8_1101_5579_2044_2"]
+    for i in z:
+        print i.qname
+
+
+
 
 
 
