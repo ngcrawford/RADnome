@@ -52,6 +52,8 @@ class SamLine(object):
             self.mrnm = line[6]
             self.mpos = int(line[7])
             self.tlen = int(line[8])
+            self.seq = line[9]
+            self.qual = line[10]
 
 
 class Logging(object):
@@ -412,21 +414,189 @@ class MergeAssemblies(Logging):
         self.__associate_contigs_log__(run_results)        # format logging results
 
 
+
+    def __generate_test_data__(self, sam1, sam2, contig_positions, min_mapq):
+
+
+
+        run_results = {
+            "total_queries": 0,
+            "passed_filter": 0,
+            "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "min_mapq": min_mapq,
+            "query_sam": sam1,
+            "searched_sam": sam2,
+            "contig_positions": contig_positions,
+            "pickle": None,
+            }
+
+        contig_2_contig_dict = defaultdict(list)
+
+        #  CREATE SAM INDEX IF IT DOESN'T EXIST
+        if not os.path.exists(sam2 + FileIndex.ext):
+            FileIndex.create(sam2, lambda fh: SamLine(fh).qname, allow_multiple=True)
+
+        fi = FileIndex(sam2, SamLine, allow_multiple=True)
+        ma = MergeAssemblies()
+
+        contig_starts = [int(l.strip()) for l in open(contig_positions, 'rU')]
+
+        fq1_out = open("test_fq1.fq",'w')
+        fq2_out = open("test_fq2.fq",'w')
+
+        with open(sam1, 'rU') as qs:
+
+            for count, q in enumerate(qs):
+
+                if q.startswith("@"):                      # skip header lines
+                    continue
+
+                # SPLIT LINE AND IDENTIFY QUERY POSITION.
+                q = q.strip().split("\t")
+                query_pos = int(q[3])
+                query_pos = ma.round_bp_pos(query_pos)     # this could be more sophisticated.
+
+                q_id = q[0][:-1] + "2"                     # create query id (e.g., ends with "2")
+                q_mapq = int(q[4])                         # and, mapping quality.
+
+
+                # SEARCH FOR QUERY AND PARSE RESULTS
+                for s in fi[q_id]:
+
+                    fq1 = (q[0], q[9], q[10])
+                    fq2 = (s.qname, s.seq, s.qual)
+
+                    fq1_line = "@{}\n{}\n+\n{}\n".format(*fq1)
+                    fq2_line = "@{}\n{}\n+\n{}\n".format(*fq2)
+
+                    fq1_out.write(fq1_line)
+                    fq2_out.write(fq2_line)
+
+                    # if (q_mapq > min_mapq) and (s.mapq > min_mapq):
+
+                    #     run_results["passed_filter"] += 1
+
+                    #     hit_pos = ma.get_hit_pos(s)
+                    #     hit_pos = ma.round_bp_pos(hit_pos)
+                    #     contig_2_contig_dict[query_pos].append(hit_pos)
+
+
+class RunRainbow(object):
+    """docstring for RunRainbow"""
+    def __init__(self):
+        super(RunRainbow, self).__init__()
+
+    def run_cluster_cmd(self, fq_id):
+
+        cli = "rainbow cluster -1 {0}".format(fq_id)
+        cli_list = shlex.split(cli)
+        line, err = Popen(cli_list,
+                          stdin=PIPE,
+                          stdout=open("{}.cluster.out".format(fq_id), 'w'),
+                          stderr=PIPE).communicate()
+        pass
+
+    def run_div_cmd(self, fq_id):
+
+        cli = "rainbow div -i {0}.cluster.out -o {0}.div.out".format(fq_id)
+        cli_list = shlex.split(cli)
+        line, err = Popen(cli_list,
+                          stdin=PIPE,
+                          stdout=PIPE,
+                          stderr=PIPE).communicate()
+
+    def run_merge_cmd(self, fq_id):
+
+        cli = "rainbow merge -a -i {0}.div.out -o {0}.asm.out".format(fq_id)
+        cli_list = shlex.split(cli)
+        line, err = Popen(cli_list,
+                          stdin=PIPE,
+                          stdout=PIPE,
+                          stderr=PIPE).communicate()
+
+
+    def run_gzip(self, fq_id):
+        cli = "gzip {0}".format(fq_id)
+        cli_list = shlex.split(cli)
+        line, err = Popen(cli_list,
+                          stdin=PIPE,
+                          stdout=PIPE,
+                          stderr=PIPE).communicate()
+
+    def make_READnome(self, fq_id, run_ID, buff=500):
+        asm = "{}.asm.out".format(fq_id)
+        fa = "{}.asm.fa".format(fq_id)
+
+        G = GenerateRADnome()
+        G.make_pseudo_genome(asm, fa, buff, run_ID)
+
+    def run_bowtie(self, fq_id):
+        cli = "bowtie2-build -f {0}.asm.fa {0}.asm".format(fq_id)
+        cli_list = shlex.split(cli)
+        line, err = Popen(cli_list,
+                          stdin=PIPE,
+                          stdout=PIPE,
+                          stderr=PIPE).communicate()
+
+
+        cli = "bowtie2 \
+               --very-sensitive \
+               --end-to-end \
+               -x {0}.asm \
+               -U {0}".format(fq_id)
+
+        cli_list = shlex.split(cli)
+        line, err = Popen(cli_list,
+                          stdin=PIPE,
+                          stdout=open("{}.sam".format(fq_id), 'w'),
+                          stderr=PIPE).communicate()
+
+    def run_rainbow(self, fq1, fq2, run_ID):
+
+        # -------------------------
+        # Run Rainbow
+        # -------------------------
+
+        # self.run_cluster_cmd(fq1)
+        # self.run_cluster_cmd(fq2)
+
+        # self.run_div_cmd(fq1)
+        # self.run_div_cmd(fq2)
+
+        # self.run_merge_cmd(fq1)
+        # self.run_merge_cmd(fq2)
+
+        # -------------------------
+        # Run Cluster
+        # -------------------------
+        self.make_READnome(fq1, "{}.R1".format(run_ID))
+        self.make_READnome(fq2, "{}.R2".format(run_ID))
+
+        self.run_bowtie(fq1)
+        self.run_bowtie(fq1)
+
+
+
 if __name__ == '__main__':
 
-    queries = 'r1.sorted.sam'
-    sam2 = '/home/ngcrawford/Data/Nearctic_Turtles/sams/neartic.trachemys.2.sam'
-    contig_positions = "r1.asm.contig_start_pos.txt"
+    fq1 = "/home/ngcrawford/Data/Nearctic_Turtles/test_fq1.fq"
+    fq2 = "/home/ngcrawford/Data/Nearctic_Turtles/test_fq2.fq"
+
+    R = RunRainbow()
+    R.run_rainbow(fq1, fq2, 'test_run')
+
+    # G = MergeAssemblies()
+    # sam1 = "/home/ngcrawford/Data/Nearctic_Turtles/test_data/neartic.trachemys.1.50k.sam"
+    # sam2 = "/home/ngcrawford/Data/Nearctic_Turtles/READ_aligments/sams/neartic.trachemys.2.sam"
+    # cntg_pos = "/home/ngcrawford/Data/Nearctic_Turtles/RADnome/neartic.trachemys.1.contig_start_pos.txt"
+    # G.__generate_test_data__(sam1, sam2, cntg_pos, min_mapq=3)
 
 
-    fi = FileIndex(sam2, SamLine, allow_multiple=True)
-    ma = MergeAssemblies()
 
 
-    z = fi["8_1101_5579_2044_2"]
-    for i in z:
-        print i.qname
-
+    # ---------------------------------
+    #  Make test data
+    # ---------------------------------
 
 
 
