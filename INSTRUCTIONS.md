@@ -4,7 +4,7 @@ Some preliminary instructions follow that should get you started.
 
 #### Preliminaries
 
-1. Make sure you have forward and reverse PE-RAD fastq files.
+1. Make sure you have forward and reverse PE-RAD fastq files. The reads in each file need to have the same length. For example, in the test data all the R1 reads are 100 bp and all the R1 reads are 95 bp.
 
 1. You'll need to install git, rainbow, bowtie2, and samtools so that they can be run on the command line.
 
