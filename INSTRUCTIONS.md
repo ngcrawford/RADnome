@@ -1,12 +1,12 @@
 ## Super basic instructions
 
-Some preliminary instructions follow that should get you started.
+Some preliminary instructions follow to get you started.
 
 #### Preliminaries
 
 1. Make sure you have forward and reverse PE-RAD fastq files. The reads in each file need to have the same length. For example, in the test data all the R1 reads are 100 bp and all the R1 reads are 95 bp.
 
-1. You'll need to install git, rainbow, bowtie2, and samtools so that they can be run on the command line.
+1. You'll need to install [git][1], [rainbow][2], [bowtie2][3], and [samtools][4], and update the PATH variable so that they can be run on the command line.
 
 1. Your python version should be 2.7. Run `python --version` in terminal to check this.
 
@@ -38,3 +38,11 @@ Some preliminary instructions follow that should get you started.
                                 Name of run. Becomes fasta name.
           -c CORES, --cores CORES
                                 Number of processor cores for bowtie2 to use.
+
+
+[1]: http://git-scm.com/
+[2]: http://sourceforge.net/projects/bio-rainbow/
+[3]: http://bowtie-bio.sourceforge.net/bowtie2/index.shtml
+[4]: http://samtools.sourceforge.net/
+
+
