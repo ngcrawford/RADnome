@@ -707,7 +707,7 @@ class RunPipeline(object):
         self.make_RADnome(fq1, fq2, run_ID)
 
         sys.stdout.write("Step 9: Organize directory ...\n")
-        #self.tidy_dir(fq1)
+        self.tidy_dir(fq1)
 
 if __name__ == '__main__':
     pass

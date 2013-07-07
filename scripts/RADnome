@@ -24,13 +24,13 @@ from RADnome.GenerateRADnome import *
 
 
 def generate_READnome(args):
-    G = GenerateRADnome.GenerateRADnome()
+    G = GenerateRADnome()
     G.make_pseudo_genome(args.infile, args.outfile, args.N_padding, args.run_name)
     G.self.make_log_file(args)
 
 
 def generate_RADnome(args):
-    G = GenerateRADnome.GenerateRADnome()
+    G = GenerateRADnome()
     G.contigs_2_RADnome(args.readnomes[0], args.readnomes[1], args.contig_lengths[0],
                         args.contig_lengths[1], args.pickle_dict,
                         args.run_name, args.N_padding, args.insert_size,
@@ -38,12 +38,12 @@ def generate_RADnome(args):
 
 
 def assoicate_contigs(args):
-    M = GenerateRADnome.MergeAssemblies()
+    M = MergeAssemblies()
     M.associate_contigs(args.sams[0], args.sams[1], args.pos_file, args.minimum_MAPQ)
 
 
 def run_pipeline(args):
-    P = GenerateRADnome.RunPipeline()
+    P = RunPipeline()
     P.pipeline(args.fqs[0], args.fqs[1], args.run_name, args.cores)
 
 
