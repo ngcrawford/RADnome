@@ -19,6 +19,8 @@ import sys
 import gzip
 import math
 import shlex
+import glob
+import shutil
 import numpy
 import pysam
 import argparse
@@ -86,11 +88,10 @@ class Logging(object):
 
         txt = textwrap.dedent(txt)
 
-        outfile = self.today.strftime('ascRADnome..%m%d%y.log')
+        outfile = self.today.strftime('ascRADnom.%m%d%y.log')
         outfile = open(outfile, 'w')
         outfile.write(txt)
 
-        print txt
         pass
 
 
@@ -250,7 +251,9 @@ class GenerateRADnome(Logging):
         header_line = open(fasta_path, 'rU').readline()
         return header_line.strip(">").strip()
 
-    def contigs_2_RADnome(self, rad1, rad2, r1_contig_len, r2_contig_len, contig_2_contig_dict, run_name, N_padding, insert_size, proportion):
+    def contigs_2_RADnome(self, rad1, rad2, r1_contig_len,
+                          r2_contig_len, contig_2_contig_dict,
+                          run_name, N_padding, insert_size, proportion):
 
         run_results = {
             "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
@@ -404,7 +407,7 @@ class MergeAssemblies(Logging):
 
         #CREATE PICKLE OUTPUT FILE
         today = datetime.date.today()
-        pkl_output_file_name = today.strftime('R1_to_R2_contig_associations.%m%d%y.pkl')
+        pkl_output_file_name = today.strftime('R1_to_R2_contig_associations.pkl')
         pkl_out = open(pkl_output_file_name, 'wb')
         pickle.dump(contig_2_contig_dict, pkl_out)
 
@@ -441,8 +444,8 @@ class MergeAssemblies(Logging):
 
         contig_starts = [int(l.strip()) for l in open(contig_positions, 'rU')]
 
-        fq1_out = open("test_fq1.fq",'w')
-        fq2_out = open("test_fq2.fq",'w')
+        fq1_out = open("test_fq1.10k.fq",'w')
+        fq2_out = open("test_fq2.10k.fq",'w')
 
         with open(sam1, 'rU') as qs:
 
@@ -459,6 +462,7 @@ class MergeAssemblies(Logging):
                 q_id = q[0][:-1] + "2"                     # create query id (e.g., ends with "2")
                 q_mapq = int(q[4])                         # and, mapping quality.
 
+                if count > 10000: break
 
                 # SEARCH FOR QUERY AND PARSE RESULTS
                 for s in fi[q_id]:
@@ -481,10 +485,11 @@ class MergeAssemblies(Logging):
                     #     contig_2_contig_dict[query_pos].append(hit_pos)
 
 
-class RunRainbow(object):
-    """docstring for RunRainbow"""
+class RunPipeline(object):
+    """docstring for RunPipeline"""
     def __init__(self):
-        super(RunRainbow, self).__init__()
+        super(RunPipeline, self).__init__()
+
 
     def run_cluster_cmd(self, fq_id):
 
@@ -530,7 +535,7 @@ class RunRainbow(object):
         G = GenerateRADnome()
         G.make_pseudo_genome(asm, fa, buff, run_ID)
 
-    def run_bowtie(self, fq_id):
+    def run_bowtie2(self, fq_id, cores):
         cli = "bowtie2-build -f {0}.asm.fa {0}.asm".format(fq_id)
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
@@ -538,12 +543,12 @@ class RunRainbow(object):
                           stdout=PIPE,
                           stderr=PIPE).communicate()
 
-
         cli = "bowtie2 \
                --very-sensitive \
                --end-to-end \
+               -p {1} \
                -x {0}.asm \
-               -U {0}".format(fq_id)
+               -U {0}".format(fq_id, cores)
 
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
@@ -551,7 +556,6 @@ class RunRainbow(object):
                           stdout=open("{}.sam".format(fq_id), 'w'),
                           stderr=PIPE).communicate()
 
-    def run_rainbow(self, fq1, fq2, run_ID):
     def sam_to_sorted_sam(self, fq_id):
 
         cli = "samtools view -bS {}.sam".format(fq_id)
@@ -730,9 +734,4 @@ if __name__ == '__main__':
     # ---------------------------------
     #  Make test data
     # ---------------------------------
-
-
-
-
-
 
