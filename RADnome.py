@@ -39,6 +39,11 @@ def assoicate_contigs(args):
     M.associate_contigs(args.sams[0], args.sams[1], args.pos_file, args.minimum_MAPQ)
 
 
+def run_pipeline(args):
+    P = GenerateRADnome.RunPipeline()
+    P.pipeline(args.fqs[0], args.fqs[1], args.run_name, args.cores)
+
+
 def get_args():
     """Parse sys.argv"""
 
@@ -48,7 +53,7 @@ def get_args():
     subparsers = parser.add_subparsers(title='subcommands',
                                        help='sub-command help')
 
-    parser_readnome = subparsers.add_parser(
+    parser_READnome = subparsers.add_parser(
         'makeREADnome',
         help='Create pseudo-genome from single end reads assembled \
               with Rainbow (Chong 2012).')
@@ -61,29 +66,33 @@ def get_args():
         'makeRADnome',
         help='Create pseudo-genome for associated contigs.')
 
+    parser_pipeline = subparsers.add_parser(
+        'runPipeline',
+        help='Run complete RADnome pipeline.')
+
     # --------------------------------------
     # SETUP READnome SUB-COMMAND
     # --------------------------------------
 
-    parser_readnome.add_argument(
+    parser_READnome.add_argument(
         '-n', '--N-padding',
         type=int,
         default=500,
         help="Number of N's to insert between each cluster/contig.")
 
-    parser_readnome.add_argument(
+    parser_READnome.add_argument(
         '-r', '--run-name',
         type=str,
         default='RADnome',
         help="Name of run. Becomes fasta name.")
 
-    parser_readnome.add_argument(
+    parser_READnome.add_argument(
         'infile',
         nargs='?',
         default=sys.stdin,
         help='Path to input. (default is STDIN)')
 
-    parser_readnome.add_argument(
+    parser_READnome.add_argument(
         'outfile',
         nargs='?',
         default=sys.stdout,
@@ -163,10 +172,32 @@ def get_args():
         default='RADnome',
         help="Name of run. Becomes fasta name.")
 
+    # --------------------------------------
+    # SETUP runPipeline SUB-COMMAND
+    # --------------------------------------
+
+    parser_pipeline.add_argument('--fqs',
+        type=str,
+        nargs=2,
+        help="Forward and reverse fastq files.")
+
+    parser_pipeline.add_argument(
+        '-r', '--run-name',
+        type=str,
+        default='RADnome',
+        help="Name of run. Becomes fasta name.")
+
+    parser_pipeline.add_argument(
+        '-c', '--cores',
+        type=int,
+        default=1,
+        help="Number of processor cores for bowtie2 to use.")
+
     # RUN APPROPRIATE SUB-COMMAND.
-    parser_readnome.set_defaults(func=generate_READnome)
+    parser_READnome.set_defaults(func=generate_READnome)
     parser_ascContigs.set_defaults(func=assoicate_contigs)
     parser_RADnome.set_defaults(func=generate_RADnome)
+    parser_pipeline.set_defaults(func=run_pipeline)
 
     args = parser.parse_args()
     args.func(args)

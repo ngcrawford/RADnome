@@ -552,38 +552,171 @@ class RunRainbow(object):
                           stderr=PIPE).communicate()
 
     def run_rainbow(self, fq1, fq2, run_ID):
+    def sam_to_sorted_sam(self, fq_id):
 
-        # -------------------------
+        cli = "samtools view -bS {}.sam".format(fq_id)
+        cli_list = shlex.split(cli)
+        line, err = Popen(cli_list,
+                          stdin=PIPE,
+                          stdout=open("{}.bam".format(fq_id), 'wb'),
+                          stderr=PIPE).communicate()
+
+        cli = "samtools sort {0}.bam {0}.sorted".format(fq_id)
+        cli_list = shlex.split(cli)
+        line, err = Popen(cli_list,
+                          stdin=PIPE,
+                          stdout=PIPE,
+                          stderr=PIPE).communicate()
+
+        cli = "samtools view -h {0}.sorted.bam".format(fq_id)
+        cli_list = shlex.split(cli)
+        line, err = Popen(cli_list,
+                          stdin=PIPE,
+                          stdout=open("{0}.sorted.sam".format(fq_id), 'w'),
+                          stderr=PIPE).communicate()
+
+    def ascContigs(self, fq1, fq2, run_ID, min_mapq):
+
+        sam1 = "{}.sorted.sam".format(fq1)
+        sam2 = "{}.sorted.sam".format(fq2)
+        contig_positions = "{}.R1.contig_start_pos.txt".format(run_ID)
+
+        M = MergeAssemblies()
+        log = M.associate_contigs(sam1, sam2, contig_positions, min_mapq)
+
+    def make_RADnome(self, fq1, fq2, run_ID):
+        """
+        python RADnome.py RADnome \
+        -n 500 \
+        -i 50 \
+        -cl 100 95 \
+        -r neartic.trachemys.RADnome \
+        --readnomes /home/ngcrawford/Data/Nearctic_Turtles/RADnome/neartic.trachemys.1.RADnome.fa \
+                    /home/ngcrawford/Data/Nearctic_Turtles/RADnome/neartic.trachemys.2.RADnome.fa \
+        --pickle-dict /home/ngcrawford/Data/Nearctic_Turtles/contig_2_contig_associations_dict.pkl \
+        neartic.trachemys.merged.RADnome.fa
+
+        rad1, rad2, r1_contig_len,
+                          r2_contig_len, contig_2_contig_dict,
+                          run_name, N_padding, insert_size, proportion
+
+
+        """
+
+        rad1 = "{}.asm.fa".format(fq1)
+        rad2 = "{}.asm.fa".format(fq2)
+        r1_contig_len = 100
+        r2_contig_len = 95
+        contig_2_contig_dict = "R1_to_R2_contig_associations.pkl"
+        run_name = run_ID
+        N_padding = 500
+        insert_size = 50
+        proportion = 0.8
+
+        pysam.faidx(rad1)
+        pysam.faidx(rad2)
+
+        G = GenerateRADnome()
+        G.contigs_2_RADnome(rad1, rad2, r1_contig_len,
+                  r2_contig_len, contig_2_contig_dict,
+                  run_name, N_padding, insert_size, proportion)
+
+    def tidy_dir(self, fq1):
+
+        pth = os.path.split(fq1)[0]
+        os.chdir(pth)
+
+        if os.path.exists('bowtie2/') is False:
+            os.mkdir("bowtie2")
+
+        a = [shutil.move(f, 'bowtie2/') for f in glob.glob('*.bt2')]
+
+        if os.path.exists('alignments/') is False:
+            os.mkdir("alignments")
+
+        a = [shutil.move(f, 'alignments/') for f in glob.glob('*.sam')]
+        a = [shutil.move(f, 'alignments/') for f in glob.glob('*.bam')]
+        a = [shutil.move(f, 'alignments/') for f in glob.glob('*.fidx')]
+
+        if os.path.exists('fastqs/') is False:
+            os.mkdir("fastqs")
+
+        a = [shutil.move(f, 'fastqs/') for f in glob.glob('*.fq')]
+
+        if os.path.exists('fastas/') is False:
+            os.mkdir("fastas")
+
+        a = [shutil.move(f, 'fastas/') for f in glob.glob('*.fa')]
+        a = [shutil.move(f, 'fastas/') for f in glob.glob('*.fai')]
+        a = [shutil.move(f, 'fastas/') for f in glob.glob('*.contig_start*')]
+        a = [shutil.move(f, 'fastas/') for f in glob.glob('*.pkl')]
+
+        if os.path.exists('rainbow/') is False:
+            os.mkdir("rainbow")
+
+        a = [shutil.move(f, 'rainbow/') for f in glob.glob('*.out')]
+
+        if os.path.exists('logs/') is False:
+            os.mkdir("logs")
+
+        a = [shutil.move(f, 'logs/') for f in glob.glob('*.log')]
+        pass
+
+    def pipeline(self, fq1, fq2, run_ID, cores=3):
+
+        # -----------
         # Run Rainbow
-        # -------------------------
+        # -----------
 
-        # self.run_cluster_cmd(fq1)
-        # self.run_cluster_cmd(fq2)
+        sys.stdout.write("""Generating {0} on {1}\n\n""".format(run_ID, datetime.date.today()))
 
-        # self.run_div_cmd(fq1)
-        # self.run_div_cmd(fq2)
+        sys.stdout.write("Step 1: Running Rainbow Cluster ...\n")
+        self.run_cluster_cmd(fq1)
+        self.run_cluster_cmd(fq2)
 
-        # self.run_merge_cmd(fq1)
-        # self.run_merge_cmd(fq2)
+        sys.stdout.write("Step 2: Running Rainbow Div ...\n")
+        self.run_div_cmd(fq1)
+        self.run_div_cmd(fq2)
 
-        # -------------------------
-        # Run Cluster
-        # -------------------------
+        sys.stdout.write("Step 3: Running Rainbow Merge ...\n")
+        self.run_merge_cmd(fq1)
+        self.run_merge_cmd(fq2)
+
+        # -------------------------------
+        # Generate READnomes and RADnomes
+        # -------------------------------
+
+        sys.stdout.write("Step 4: Creating R1 and R2 READnomes ...\n")
         self.make_READnome(fq1, "{}.R1".format(run_ID))
         self.make_READnome(fq2, "{}.R2".format(run_ID))
 
-        self.run_bowtie(fq1)
-        self.run_bowtie(fq1)
+        sys.stdout.write("Step 5: Running Bowtie2 ...\n")
+        self.run_bowtie2(fq1, cores)
+        self.run_bowtie2(fq2, cores)
 
+        sys.stdout.write("Step 6: Creating sorted BAMs ...\n")
+        self.sam_to_sorted_sam(fq1)
+        self.sam_to_sorted_sam(fq2)
 
+        sys.stdout.write("Step 7: Associating contigs ...\n")
+        self.ascContigs(fq1, fq2, run_ID, min_mapq=3)
+
+        sys.stdout.write("Step 8: Create RADnome ...\n")
+        self.make_RADnome(fq1, fq2, run_ID)
+
+        self.tidy_dir(fq1)
 
 if __name__ == '__main__':
+    pass
 
-    fq1 = "/home/ngcrawford/Data/Nearctic_Turtles/test_fq1.fq"
-    fq2 = "/home/ngcrawford/Data/Nearctic_Turtles/test_fq2.fq"
+    # fq1 = "/home/ngcrawford/Data/Nearctic_Turtles/test_fq1.fq"
+    # fq2 = "/home/ngcrawford/Data/Nearctic_Turtles/test_fq2.fq"
 
-    R = RunRainbow()
-    R.run_rainbow(fq1, fq2, 'test_run')
+    # fq1 = "/Users/ngcrawford/Desktop/RADs/CalAcd/test_dir/test_fq1.10k.fq"
+    # fq2 = "/Users/ngcrawford/Desktop/RADs/CalAcd/test_dir/test_fq2.10k.fq"
+
+    # R = RunRainbow()
+    # R.run_rainbow(fq1, fq2, 'test_run')
 
     # G = MergeAssemblies()
     # sam1 = "/home/ngcrawford/Data/Nearctic_Turtles/test_data/neartic.trachemys.1.50k.sam"
