@@ -6,11 +6,11 @@
 
 1. Your python version should be 2.7. Run `python --version` in terminal to check this.
 
-1. Pull repo and install RADnome:
+1. Clone repo and install RADnome:
 
-    git clone git:github.com/ngcrawford/RADnome
-    cd RADnome
-    python setup.py develop
+        git clone git:github.com/ngcrawford/RADnome
+        cd RADnome
+        python setup.py develop
 
 1. Available commands.
 
@@ -24,9 +24,10 @@
           -c CORES, --cores CORES
                                 Number of processor cores for bowtie2 to use.
 
-1. Run command with included test data.
+1. Run command on test data.
 
-        /RADnome.py runPipeline \
+        cd /tests/data
+        RADnome runPipeline \
         --fqs tests/data/fq1.10k.fq \
               tests/data/fq2.10k.fq \
               -c 3 \
