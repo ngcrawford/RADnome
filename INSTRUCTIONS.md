@@ -12,7 +12,7 @@ Some preliminary instructions follow that should get you started.
 
 1. Clone repo and install RADnome:
 
-        git clone git:github.com/ngcrawford/RADnome
+        git clone https://github.com/ngcrawford/RADnome
         cd RADnome
         python setup.py develop
 
