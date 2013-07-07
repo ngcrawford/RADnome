@@ -1,8 +1,12 @@
-### Super basic instructions:
+## Super basic instructions
 
-1. Make sure you have to PE RAD fastq files.
+Some preliminary instructions follow that should get you started.
 
-1. You'll need to first install git, rainbow, bowtie2, and samtools.
+#### Preliminaries
+
+1. Make sure you have forward and reverse PE-RAD fastq files.
+
+1. You'll need to install git, rainbow, bowtie2, and samtools so that they can be run on the command line.
 
 1. Your python version should be 2.7. Run `python --version` in terminal to check this.
 
@@ -11,6 +15,17 @@
         git clone git:github.com/ngcrawford/RADnome
         cd RADnome
         python setup.py develop
+
+#### Test the code
+
+1. Run command on test data.
+
+        cd /tests/data
+        RADnome runPipeline \
+        --fqs tests/data/fq1.10k.fq \
+              tests/data/fq2.10k.fq \
+              -c 3 \
+              -r test_pipeline
 
 1. Available commands.
 
@@ -23,12 +38,3 @@
                                 Name of run. Becomes fasta name.
           -c CORES, --cores CORES
                                 Number of processor cores for bowtie2 to use.
-
-1. Run command on test data.
-
-        cd /tests/data
-        RADnome runPipeline \
-        --fqs tests/data/fq1.10k.fq \
-              tests/data/fq2.10k.fq \
-              -c 3 \
-              -r test_pipeline
