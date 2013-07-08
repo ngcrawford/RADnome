@@ -4,3 +4,7 @@
 *.pkl
 *.ipynb
 *.egg*
+tests/data/fastas
+tests/data/bowtie2
+tests/data/rainbow
+tests/data/alignments
