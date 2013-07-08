@@ -44,6 +44,14 @@ Installing the dependencies on a standard linux disro is a bit trickier than on 
 
 To be added.
 
+### Run Test Command:
+
+        cd tests/data/
+        RADnome runPipeline \
+        --fqs fq1.10k.fq fq2.10k.fq \
+        --run-name test_run \
+        --cores 3
+
 
 [1]: http://mxcl.github.io/homebrew/
 [2]: https://github.com/Homebrew/homebrew-science
