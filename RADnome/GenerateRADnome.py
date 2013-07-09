@@ -176,14 +176,14 @@ class GenerateRADnome(Logging):
 
             return len(chunks[-1])
 
-    def get_seq(self, ID, index_path):
-        """Select sequence from indexed fastq file."""
+    # def get_seq(self, ID, index_path):
+    #     """Select sequence from indexed fastq file."""
 
-        cli = "cdbyank {0} -a {1}".format(index_path, ID)
-        cli_parts = shlex.split(cli)
-        line, err = Popen(cli_parts, stdin=PIPE, stdout=PIPE, stderr=PIPE).communicate()
-        ID, seq, plus, quals = line.strip().split("\n")
-        return (ID, seq, plus, quals)
+    #     cli = "cdbyank {0} -a {1}".format(index_path, ID)
+    #     cli_parts = shlex.split(cli)
+    #     line, err = Popen(cli_parts, stdin=PIPE, stdout=PIPE, stderr=PIPE).communicate()
+    #     ID, seq, plus, quals = line.strip().split("\n")
+    #     return (ID, seq, plus, quals)
 
 
     def make_pseudo_genome(self, rainbow_clustered_fin, pseudo_genome_fout, Ns, run_name):
@@ -279,8 +279,8 @@ class GenerateRADnome(Logging):
         r1 = pysam.Fastafile(rad1)
         r2 = pysam.Fastafile(rad2)
 
-        today = datetime.date.today()
-        fout = run_name + "." + today.strftime('%m%d%y.fa')
+        # today = datetime.date.today()
+        fout = run_name + ".RADnome.fa"
         run_results['fout'] = fout
         fout = open(fout, 'w')
 
@@ -351,7 +351,7 @@ class MergeAssemblies(Logging):
             return 'unpaired'
 
 
-    def associate_contigs(self, sam1, sam2, contig_positions, min_mapq):
+    def associate_contigs(self, sam1, sam2, contig_positions, min_mapq, run_ID):
 
         run_results = {
             "total_queries": 0,
@@ -390,8 +390,6 @@ class MergeAssemblies(Logging):
                 q_id = q[0][:-1] + "2"                     # create query id (e.g., ends with "2")
                 q_mapq = int(q[4])                         # and, mapping quality.
 
-                if count % 50000 == 0:
-                    print count
 
                 # SEARCH FOR QUERY AND PARSE RESULTS
                 for s in fi[q_id]:
@@ -407,7 +405,9 @@ class MergeAssemblies(Logging):
 
         #CREATE PICKLE OUTPUT FILE
         today = datetime.date.today()
-        pkl_output_file_name = today.strftime('R1_to_R2_contig_associations.pkl')
+
+        path = os.path.split(sam1)[0]
+        pkl_output_file_name = os.path.join(path, '{}.R1_to_R2_contig_associations.pkl'.format(run_ID))
         pkl_out = open(pkl_output_file_name, 'wb')
         pickle.dump(contig_2_contig_dict, pkl_out)
 
@@ -419,7 +419,6 @@ class MergeAssemblies(Logging):
 
 
     def __generate_test_data__(self, sam1, sam2, contig_positions, min_mapq):
-
 
 
         run_results = {
@@ -476,14 +475,6 @@ class MergeAssemblies(Logging):
                     fq1_out.write(fq1_line)
                     fq2_out.write(fq2_line)
 
-                    # if (q_mapq > min_mapq) and (s.mapq > min_mapq):
-
-                    #     run_results["passed_filter"] += 1
-
-                    #     hit_pos = ma.get_hit_pos(s)
-                    #     hit_pos = ma.round_bp_pos(hit_pos)
-                    #     contig_2_contig_dict[query_pos].append(hit_pos)
-
 
 class RunPipeline(object):
     """docstring for RunPipeline"""
@@ -501,9 +492,13 @@ class RunPipeline(object):
                           stderr=PIPE).communicate()
         return 1
 
-    def run_div_cmd(self, fq_id):
+    def run_div_cmd(self, fq_id, out_path=None):
 
-        fout = os.path.split(fq_id)[-1]
+        if out_path != None:
+            fout_name = os.path.split(fq_id)[-1]
+            fout = os.path.join(out_path, fout_name)
+        else:
+            fout = os.path.split(fq_id)[-1]
 
         cli = "rainbow div -i {0}.cluster.out -o {1}.div.out".format(fq_id, fout)
         cli_list = shlex.split(cli)
@@ -514,9 +509,13 @@ class RunPipeline(object):
         return 1
 
 
-    def run_merge_cmd(self, fq_id):
+    def run_merge_cmd(self, fq_id, out_path=None):
 
-        fout = os.path.split(fq_id)[-1]
+        if out_path != None:
+            fout_name = os.path.split(fq_id)[-1]
+            fout = os.path.join(out_path, fout_name)
+        else:
+            fout = os.path.split(fq_id)[-1]
 
         cli = "rainbow merge -a -i {0}.div.out -o {1}.asm.out".format(fq_id, fout)
         cli_list = shlex.split(cli)
@@ -527,6 +526,7 @@ class RunPipeline(object):
         return 1
 
     def run_gzip(self, fq_id):
+
         cli = "gzip {0}".format(fq_id)
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
@@ -535,20 +535,29 @@ class RunPipeline(object):
                           stderr=PIPE).communicate()
         return 1
 
-    def make_READnome(self, fq_id, run_ID, buff=500):
+    def make_READnome(self, fq_id, run_ID, buff=500, out_path=None):
 
-        fout = os.path.split(fq_id)[-1]
+        if out_path != None:
+            fout_name = os.path.split(fq_id)[-1]
+            fout = os.path.join(out_path, fout_name)
+        else:
+            fout = os.path.split(fq_id)[-1]
 
         asm = "{}.asm.out".format(fout)
         fa = "{}.asm.fa".format(fout)
 
+        print asm, fa
         G = GenerateRADnome()
         G.make_pseudo_genome(asm, fa, buff, run_ID)
         return 1
 
-    def run_bowtie2(self, fq_id, cores):
+    def run_bowtie2(self, fq_id, cores, out_path=None):
 
-        fout = os.path.split(fq_id)[-1]
+        if out_path != None:
+            fout_name = os.path.split(fq_id)[-1]
+            fout = os.path.join(out_path, fout_name)
+        else:
+            fout = os.path.split(fq_id)[-1]
 
         cli = "bowtie2-build -f {0}.asm.fa {0}.asm".format(fout)
         cli_list = shlex.split(cli)
@@ -571,9 +580,29 @@ class RunPipeline(object):
                           stderr=PIPE).communicate()
         return 1
 
-    def sam_to_sorted_sam(self, fq_id):
+    def create_faidx(self, fa, out_path=None):
 
-        fout = os.path.split(fq_id)[-1]
+        # if out_path != None:
+        #     fout_name = os.path.split(fa)[-1]
+        #     fout = os.path.join(out_path, fout_name)
+        # else:
+        #     fout = os.path.split(fa)[-1]
+
+        cli = "samtools faidx {}".format(fa)
+        cli_list = shlex.split(cli)
+        line, err = Popen(cli_list,
+                          stdin=PIPE,
+                          stdout=PIPE,
+                          stderr=PIPE).communicate()
+
+
+    def sam_to_sorted_sam(self, fq_id, out_path=None):
+
+        if out_path != None:
+            fout_name = os.path.split(fq_id)[-1]
+            fout = os.path.join(out_path, fout_name)
+        else:
+            fout = os.path.split(fq_id)[-1]
 
         cli = "samtools view -bS {}.sam".format(fout)
         cli_list = shlex.split(cli)
@@ -597,10 +626,19 @@ class RunPipeline(object):
                           stderr=PIPE).communicate()
         return 1
 
-    def ascContigs(self, fq1, fq2, run_ID, min_mapq):
+    def ascContigs(self, fq1, fq2, run_ID, min_mapq, out_path=None):
 
-        fout1 = os.path.split(fq1)[-1]
-        fout2 = os.path.split(fq2)[-1]
+        if out_path != None:
+            fout1 = os.path.split(fq1)[-1]
+            fout2 = os.path.split(fq2)[-1]
+
+            fout1 = os.path.join(out_path, fout1)
+            fout2 = os.path.join(out_path, fout2)
+
+            run_ID = os.path.join(out_path, run_ID)
+        else:
+            fout1 = os.path.split(fq1)[-1]
+            fout2 = os.path.split(fq2)[-1]
 
         sam1 = "{}.sorted.sam".format(fout1)
         sam2 = "{}.sorted.sam".format(fout2)
@@ -608,50 +646,44 @@ class RunPipeline(object):
         contig_positions = "{}.R1.contig_start_pos.txt".format(run_ID)
 
         M = MergeAssemblies()
-        log = M.associate_contigs(sam1, sam2, contig_positions, min_mapq)
+        log = M.associate_contigs(sam1, sam2, contig_positions, min_mapq, run_ID)
         return 1
 
-    def make_RADnome(self, fq1, fq2, run_ID):
+    def make_RADnome(self, fq1, fq2, run_ID, out_path=None):
 
         def seq_len(fq):
             with open(fq,'rU') as fin:
                 fin.readline()
                 return len(fin.readline().strip())
 
-        """
-        python RADnome.py RADnome \
-        -n 500 \
-        -i 50 \
-        -cl 100 95 \
-        -r neartic.trachemys.RADnome \
-        --readnomes /home/ngcrawford/Data/Nearctic_Turtles/RADnome/neartic.trachemys.1.RADnome.fa \
-                    /home/ngcrawford/Data/Nearctic_Turtles/RADnome/neartic.trachemys.2.RADnome.fa \
-        --pickle-dict /home/ngcrawford/Data/Nearctic_Turtles/contig_2_contig_associations_dict.pkl \
-        neartic.trachemys.merged.RADnome.fa
+        if out_path != None:
+            fout1 = os.path.split(fq1)[-1]
+            fout2 = os.path.split(fq2)[-1]
 
-        rad1, rad2, r1_contig_len,
-                          r2_contig_len, contig_2_contig_dict,
-                          run_name, N_padding, insert_size, proportion
-        """
+            fout1 = os.path.join(out_path, fout1)
+            fout2 = os.path.join(out_path, fout2)
 
-
-        fout1 = os.path.split(fq1)[-1]
-        fout1 = os.path.split(fq2)[-1]
+            run_ID = os.path.join(out_path, run_ID)
+        else:
+            fout1 = os.path.split(fq1)[-1]
+            fout2 = os.path.split(fq2)[-1]
 
         rad1 = "{}.asm.fa".format(fout1)
-        rad2 = "{}.asm.fa".format(fout1)
+        rad2 = "{}.asm.fa".format(fout2)
 
         r1_contig_len = seq_len(fq1)
         r2_contig_len = seq_len(fq2)
 
-        contig_2_contig_dict = "R1_to_R2_contig_associations.pkl"
+        contig_2_contig_dict = "{}.R1_to_R2_contig_associations.pkl".format(run_ID)
         run_name = run_ID
         N_padding = 500
         insert_size = 50
         proportion = 0.8
 
-        pysam.faidx(rad1)
-        pysam.faidx(rad2)
+        print 'here', rad1
+
+        self.create_faidx(rad1)
+        self.create_faidx(rad2)
 
         G = GenerateRADnome()
         G.contigs_2_RADnome(rad1, rad2, r1_contig_len,
