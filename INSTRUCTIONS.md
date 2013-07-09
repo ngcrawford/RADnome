@@ -18,18 +18,17 @@ The easiest way to install the necessary dependencies on OS X is to use the [Hom
 
         brew tap homebrew/science
 
-3. Use Homebrew to install [git][6], [tokyo cabinet][3], [samtools][4], and [bowtie2][5].
+3. Use Homebrew to install [git][6], [tokyo cabinet][3], [samtools][4], [bowtie2][5], and [rainbow][9].
 
         brew install git
         brew install tokyo-cabinet
         brew install samtools
         brew install bowtie2
-
-4. Rainbow is not currently available on 
+        brew install rainbow
 
 ### Linux:
 
-Installing the dependencies on a standard linux disro is a bit trickier than on OS X. You should be able to use `apt-get` to install [git][6]. For [tokyo cabinet][3], [samtools][4], and [bowtie2][5] you'll most likely have to install from source.
+Installing the dependencies on a standard linux disro is a bit trickier than on OS X. You should be able to use `apt-get` to install [git][6]. For [tokyo cabinet][3], [samtools][4], [bowtie2][5], and [rainbow][9] you'll likely have to install from source.
 
 ## Install RADnome:
 
@@ -42,16 +41,17 @@ Installing the dependencies on a standard linux disro is a bit trickier than on 
 
 ### Run UnitTests:
 
-To be added.
+UnitTests are located in `RADnome/tests.py` and can be run with `nosetests` or the following command:
 
-### Run Test Command:
+        python RADnome/tests.py
+
+### Run command on test data:
 
         cd tests/data/
         RADnome runPipeline \
         --fqs fq1.10k.fq fq2.10k.fq \
         --run-name test_run \
         --cores 3
-
 
 [1]: http://mxcl.github.io/homebrew/
 [2]: https://github.com/Homebrew/homebrew-science
@@ -61,4 +61,5 @@ To be added.
 [6]: http://git-scm.com/
 [7]: http://en.wikipedia.org/wiki/Terminal_(OS_X)
 [8]: radnome.org
+[9]: http://sourceforge.net/projects/bio-rainbow/
 

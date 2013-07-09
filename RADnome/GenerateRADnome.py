@@ -546,7 +546,6 @@ class RunPipeline(object):
         asm = "{}.asm.out".format(fout)
         fa = "{}.asm.fa".format(fout)
 
-        print asm, fa
         G = GenerateRADnome()
         G.make_pseudo_genome(asm, fa, buff, run_ID)
         return 1
