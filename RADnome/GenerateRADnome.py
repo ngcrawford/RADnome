@@ -499,26 +499,32 @@ class RunPipeline(object):
                           stdin=PIPE,
                           stdout=open("{}.cluster.out".format(fq_id), 'w'),
                           stderr=PIPE).communicate()
-        pass
+        return 1
 
     def run_div_cmd(self, fq_id):
 
-        cli = "rainbow div -i {0}.cluster.out -o {0}.div.out".format(fq_id)
+        fout = os.path.split(fq_id)[-1]
+
+        cli = "rainbow div -i {0}.cluster.out -o {1}.div.out".format(fq_id, fout)
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
                           stdin=PIPE,
                           stdout=PIPE,
                           stderr=PIPE).communicate()
+        return 1
+
 
     def run_merge_cmd(self, fq_id):
 
-        cli = "rainbow merge -a -i {0}.div.out -o {0}.asm.out".format(fq_id)
+        fout = os.path.split(fq_id)[-1]
+
+        cli = "rainbow merge -a -i {0}.div.out -o {1}.asm.out".format(fq_id, fout)
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
                           stdin=PIPE,
                           stdout=PIPE,
                           stderr=PIPE).communicate()
-
+        return 1
 
     def run_gzip(self, fq_id):
         cli = "gzip {0}".format(fq_id)
@@ -527,16 +533,24 @@ class RunPipeline(object):
                           stdin=PIPE,
                           stdout=PIPE,
                           stderr=PIPE).communicate()
+        return 1
 
     def make_READnome(self, fq_id, run_ID, buff=500):
-        asm = "{}.asm.out".format(fq_id)
-        fa = "{}.asm.fa".format(fq_id)
+
+        fout = os.path.split(fq_id)[-1]
+
+        asm = "{}.asm.out".format(fout)
+        fa = "{}.asm.fa".format(fout)
 
         G = GenerateRADnome()
         G.make_pseudo_genome(asm, fa, buff, run_ID)
+        return 1
 
     def run_bowtie2(self, fq_id, cores):
-        cli = "bowtie2-build -f {0}.asm.fa {0}.asm".format(fq_id)
+
+        fout = os.path.split(fq_id)[-1]
+
+        cli = "bowtie2-build -f {0}.asm.fa {0}.asm".format(fout)
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
                           stdin=PIPE,
@@ -548,45 +562,54 @@ class RunPipeline(object):
                --end-to-end \
                -p {1} \
                -x {0}.asm \
-               -U {0}".format(fq_id, cores)
+               -U {2}".format(fout, cores, fq_id)
 
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
                           stdin=PIPE,
-                          stdout=open("{}.sam".format(fq_id), 'w'),
+                          stdout=open("{}.sam".format(fout), 'w'),
                           stderr=PIPE).communicate()
+        return 1
 
     def sam_to_sorted_sam(self, fq_id):
 
-        cli = "samtools view -bS {}.sam".format(fq_id)
+        fout = os.path.split(fq_id)[-1]
+
+        cli = "samtools view -bS {}.sam".format(fout)
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
                           stdin=PIPE,
-                          stdout=open("{}.bam".format(fq_id), 'wb'),
+                          stdout=open("{}.bam".format(fout), 'wb'),
                           stderr=PIPE).communicate()
 
-        cli = "samtools sort {0}.bam {0}.sorted".format(fq_id)
+        cli = "samtools sort {0}.bam {0}.sorted".format(fout)
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
                           stdin=PIPE,
                           stdout=PIPE,
                           stderr=PIPE).communicate()
 
-        cli = "samtools view -h {0}.sorted.bam".format(fq_id)
+        cli = "samtools view -h {0}.sorted.bam".format(fout)
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
                           stdin=PIPE,
-                          stdout=open("{0}.sorted.sam".format(fq_id), 'w'),
+                          stdout=open("{0}.sorted.sam".format(fout), 'w'),
                           stderr=PIPE).communicate()
+        return 1
 
     def ascContigs(self, fq1, fq2, run_ID, min_mapq):
 
-        sam1 = "{}.sorted.sam".format(fq1)
-        sam2 = "{}.sorted.sam".format(fq2)
+        fout1 = os.path.split(fq1)[-1]
+        fout2 = os.path.split(fq2)[-1]
+
+        sam1 = "{}.sorted.sam".format(fout1)
+        sam2 = "{}.sorted.sam".format(fout2)
+
         contig_positions = "{}.R1.contig_start_pos.txt".format(run_ID)
 
         M = MergeAssemblies()
         log = M.associate_contigs(sam1, sam2, contig_positions, min_mapq)
+        return 1
 
     def make_RADnome(self, fq1, fq2, run_ID):
 
@@ -611,10 +634,16 @@ class RunPipeline(object):
                           run_name, N_padding, insert_size, proportion
         """
 
-        rad1 = "{}.asm.fa".format(fq1)
-        rad2 = "{}.asm.fa".format(fq2)
+
+        fout1 = os.path.split(fq1)[-1]
+        fout1 = os.path.split(fq2)[-1]
+
+        rad1 = "{}.asm.fa".format(fout1)
+        rad2 = "{}.asm.fa".format(fout1)
+
         r1_contig_len = seq_len(fq1)
         r2_contig_len = seq_len(fq2)
+
         contig_2_contig_dict = "R1_to_R2_contig_associations.pkl"
         run_name = run_ID
         N_padding = 500
@@ -628,9 +657,9 @@ class RunPipeline(object):
         G.contigs_2_RADnome(rad1, rad2, r1_contig_len,
                   r2_contig_len, contig_2_contig_dict,
                   run_name, N_padding, insert_size, proportion)
+        return 1
 
     def tidy_dir(self, fq1):
-
 
         if os.path.exists('bowtie2/') is False:
             os.mkdir("bowtie2")
@@ -662,7 +691,7 @@ class RunPipeline(object):
             os.mkdir("logs")
 
         a = [shutil.move(f, 'logs/') for f in glob.glob('*.log')]
-        pass
+        return 1
 
     def pipeline(self, fq1, fq2, run_ID, cores=3):
 
@@ -692,9 +721,15 @@ class RunPipeline(object):
         self.make_READnome(fq1, "{}.R1".format(run_ID))
         self.make_READnome(fq2, "{}.R2".format(run_ID))
 
+
         sys.stdout.write("Step 5: Running Bowtie2 ...\n")
+
+        sys.stdout.write("  .. aligning {}\n".format(fq1))
         self.run_bowtie2(fq1, cores)
+
+        sys.stdout.write("  .. aligning {}\n".format(fq2))
         self.run_bowtie2(fq2, cores)
+
 
         sys.stdout.write("Step 6: Creating sorted BAMs ...\n")
         self.sam_to_sorted_sam(fq1)
