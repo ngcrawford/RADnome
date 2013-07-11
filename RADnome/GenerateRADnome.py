@@ -300,6 +300,12 @@ class GenerateRADnome(Logging):
         fout = run_name + ".RADnome.fa"
         run_results['fout'] = fout
         fout = open(fout, 'w')
+        RANnome_out = run_name + ".RADnome.fa"
+        run_results['RANnome_out'] = RANnome_out
+        RANnome_out = open(RANnome_out, 'w')
+
+        Singtons_nome_out = run_name + ".R1_R2.fa"
+        Singtons_nome_out = open(Singtons_nome_out, 'w')
 
         c2c = pickle.load(open(contig_2_contig_dict, 'rb'))
 
