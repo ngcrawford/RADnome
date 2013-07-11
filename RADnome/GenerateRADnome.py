@@ -287,10 +287,6 @@ class GenerateRADnome(Logging):
         r1 = pysam.Fastafile(rad1)
         r2 = pysam.Fastafile(rad2)
 
-        # today = datetime.date.today()
-        fout = run_name + ".RADnome.fa"
-        run_results['fout'] = fout
-        fout = open(fout, 'w')
         RANnome_out = run_name + ".RADnome.fa"
         run_results['RANnome_out'] = RANnome_out
         RANnome_out = open(RANnome_out, 'w')
@@ -300,10 +296,11 @@ class GenerateRADnome(Logging):
 
         c2c = pickle.load(open(contig_2_contig_dict, 'rb'))
 
-        #fout = open('test.PE_RADnome.fa','w')
         count = 0
         rad_frag_count = 0
-        previous_pos = 0
+        RADnome_pos = 0
+        singletons_pos = 0
+        seq_start = 1
         for key, value in c2c.iteritems():
             run_results["potential_rad_frags"] += 1
             if key == 0:           # skip zero key as this may be where 'unalignable fragments' get put.
@@ -316,8 +313,9 @@ class GenerateRADnome(Logging):
 
             # WRITE FASTA HEADER
             if count == 0:
-                fout.write('>{}\n'.format(run_name))
+                RANnome_out.write('>{}\n'.format(run_name))
 
+            # ASSOCIATE CONTIG PAIRS
             if self.filter_contigs(counts, proportion) >= proportion:
 
                 run_results["rad_frag_count"] += 1
@@ -336,10 +334,6 @@ class GenerateRADnome(Logging):
                 contig1 = self.__make_consensus__(contig1)
 
                 # ADD FRAGMENTS TO RADNOME
-                previous_pos = self._append_to_pseudo_genome_(bigNs, fout, previous_pos, span=80)
-                previous_pos = self._append_to_pseudo_genome_(contig1, fout, previous_pos, span=80)
-                previous_pos = self._append_to_pseudo_genome_(smallNs, fout, previous_pos, span=80)
-                previous_pos = self._append_to_pseudo_genome_(contig2, fout, previous_pos, span=80)
                 pos1 = self._append_to_pseudo_genome_(bigNs, RANnome_out, RADnome_pos, span=80)
                 pos2 = self._append_to_pseudo_genome_(contig1, RANnome_out, pos1, span=80)
                 pos3 = self._append_to_pseudo_genome_(smallNs, RANnome_out, pos2, span=80)
@@ -872,7 +866,7 @@ class RunPipeline(object):
         self.make_RADnome(fq1, fq2, run_ID)
 
         sys.stdout.write("Step 9: Organize directory ...\n")
-        self.tidy_dir(fq1)
+        # self.tidy_dir(fq1)
 
 if __name__ == '__main__':
     pass
