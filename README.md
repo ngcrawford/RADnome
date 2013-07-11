@@ -7,8 +7,7 @@ To address this problem this software independently infers contigs for each R1 a
 
 ### Basic Pipeline
 
-<img src="https://raw.github.com/ngcrawford/RADnome/master/docs/pipeline.jpg" alt="Drawing" style="width: 400px;"/>
-
+<img src="https://raw.github.com/ngcrawford/RADnome/master/docs/pipeline.jpg" alt="Drawing" style="width: 400px; margin-left: auto; margin-right: auto;"/>
 
 ### Schedule
 
