@@ -527,6 +527,63 @@ class MergeAssemblies(Logging):
                     fq2_out.write(fq2_line)
 
 
+class ContigAssembler(object):
+    """Code for assembling contigs.
+
+        Because Travis Glenn made me do it. :)"""
+    def __init__(self, arg):
+        super(ContigAssembler, self).__init__()
+
+    def count_matches(self, a, b):
+        """Make Pairs"""
+        a = [i for i in a]
+        b = [i for i in b]
+        return zip(a, b)
+
+    def is_match(self, pair):
+        """Test Pairs"""
+
+        if pair[0] == pair[1]:
+            return 1
+        else:
+            return 0
+
+    def get_max_overlap(self, mismatch_list):
+
+        pos = None
+        for count, i in enumerate(mismatch_list):
+            if i is 0:
+                pos = count
+        return pos
+
+    def assemble_contigs(self, z, y):
+        """
+        Ide
+        """
+
+        mismatch_list = []
+        chars = len(z) + 1
+        for i in range(1, chars):
+            a, b = z[(-1 * i):], y[:i]
+            count_matches(a, b)
+
+            algn = map(self.is_match, count_matches(a, b))
+
+            padding = " "*((chars - 1) - i)
+            #print algn.count(0),"{}{}".format(padding, y)
+
+            match_str = ''.join(map(str, algn))
+            #print algn.count(0), "{}{}".format(padding, match_str)
+
+            mismatch_list.append(algn.count(0))
+
+        mpos = self.get_max_overlap(mismatch_list)
+        if mpos is not None:
+            assembled_contigs = z + y[mpos+1:]
+            return assembled_contigs
+        else:
+            return mpos
+
 class RunPipeline(object):
     """docstring for RunPipeline"""
     def __init__(self):
