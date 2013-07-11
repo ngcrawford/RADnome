@@ -251,6 +251,23 @@ class GenerateRADnome(Logging):
         header_line = open(fasta_path, 'rU').readline()
         return header_line.strip(">").strip()
 
+
+    def __make_consensus__(self, seq):
+        cons = ""
+        for s in seq:
+            if s == 'A':
+                cons += 'T'
+            elif s == 'T':
+                cons += 'A'
+            elif s == 'C':
+                cons += 'G'
+            elif s == 'G':
+                cons += 'C'
+            else:
+                cons += s
+        return cons
+
+
     def contigs_2_RADnome(self, rad1, rad2, r1_contig_len,
                           r2_contig_len, contig_2_contig_dict,
                           run_name, N_padding, insert_size, proportion):
