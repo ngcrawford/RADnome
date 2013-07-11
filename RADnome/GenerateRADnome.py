@@ -349,6 +349,28 @@ class GenerateRADnome(Logging):
                 previous_pos = self._append_to_pseudo_genome_(contig1, fout, previous_pos, span=80)
                 previous_pos = self._append_to_pseudo_genome_(smallNs, fout, previous_pos, span=80)
                 previous_pos = self._append_to_pseudo_genome_(contig2, fout, previous_pos, span=80)
+                pos1 = self._append_to_pseudo_genome_(bigNs, RANnome_out, RADnome_pos, span=80)
+                pos2 = self._append_to_pseudo_genome_(contig1, RANnome_out, pos1, span=80)
+                pos3 = self._append_to_pseudo_genome_(smallNs, RANnome_out, pos2, span=80)
+                pos4 = self._append_to_pseudo_genome_(contig2, RANnome_out, pos3, span=80)
+
+                #print (seq_start + pos1 + pos2), (seq_start + pos1 + pos2 + pos3 + pos4)
+
+                RADnome_pos = pos4
+                seq_start += pos4
+
+            # PROCESS R1s
+            else:
+                bigNs = "N" * N_padding
+                contig1 = r1.fetch(r1_name, key, key+r1_contig_len)
+
+                pos1 = self._append_to_pseudo_genome_(bigNs, Singtons_nome_out, singletons_pos, span=80)
+                pos2 = self._append_to_pseudo_genome_(contig1, Singtons_nome_out, pos1, span=80)
+
+                # print (seq_start + pos1 + pos2)
+
+                singletons_pos = pos2
+                #seq_start += pos2
 
             count += 1
 
