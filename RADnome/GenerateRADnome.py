@@ -338,6 +338,12 @@ class GenerateRADnome(Logging):
                 contig1 = r1.fetch(r1_name, key, key+r1_contig_len)
                 contig2 = r2.fetch(r2_name, mode[0], mode[0]+r2_contig_len)
 
+                # RAINBOW orientation is reversed for the R1 reads
+                # so it is necessary to flip contig1's oriention
+                # ToDo: Make this generalized based on the SAM alignments
+                contig1 = contig1[::-1]
+                contig1 = self.__make_consensus__(contig1)
+
                 # ADD FRAGMENTS TO RADNOME
                 previous_pos = self._append_to_pseudo_genome_(bigNs, fout, previous_pos, span=80)
                 previous_pos = self._append_to_pseudo_genome_(contig1, fout, previous_pos, span=80)
