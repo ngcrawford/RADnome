@@ -8,3 +8,9 @@ tests/data/fastas
 tests/data/bowtie2
 tests/data/rainbow
 tests/data/alignments
+tests/data/fq1.10k.fq.*
+tests/data/fq2.10k.fq.*
+tests/data/*.bt2
+tests/data/*.txt
+tests/data/*RADnome*
+tests/data/revs*
