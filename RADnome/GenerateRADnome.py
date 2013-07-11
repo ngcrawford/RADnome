@@ -176,15 +176,6 @@ class GenerateRADnome(Logging):
 
             return len(chunks[-1])
 
-    # def get_seq(self, ID, index_path):
-    #     """Select sequence from indexed fastq file."""
-
-    #     cli = "cdbyank {0} -a {1}".format(index_path, ID)
-    #     cli_parts = shlex.split(cli)
-    #     line, err = Popen(cli_parts, stdin=PIPE, stdout=PIPE, stderr=PIPE).communicate()
-    #     ID, seq, plus, quals = line.strip().split("\n")
-    #     return (ID, seq, plus, quals)
-
 
     def make_pseudo_genome(self, rainbow_clustered_fin, pseudo_genome_fout, Ns, run_name):
         """Provide input and output file names as well as the number of Ns to insert
