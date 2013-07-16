@@ -6,6 +6,8 @@ The easiest way to install the necessary dependencies on OS X is to use the [Hom
 
 1. Open [terminal.app][7] and from the command line run the following commands:
 
+1. Install [Xcode][10] 
+
 1. Install Homebrew:
 
         ruby -e "$(curl -fsSL https://raw.github.com/mxcl/homebrew/go)"
@@ -64,4 +66,5 @@ UnitTests are located in `RADnome/tests.py` and can be run with `nosetests` or t
 [7]: http://en.wikipedia.org/wiki/Terminal_(OS_X)
 [8]: radnome.org
 [9]: http://sourceforge.net/projects/bio-rainbow/
+[10]: https://developer.apple.com/xcode/‎
 
