@@ -4,9 +4,9 @@
 
 The easiest way to install the necessary dependencies on OS X is to use the [Homebrew package manager][1].
 
-1. Open [terminal.app][7] and from the command line run the following commands:
+1. Before you begin install [Xcode][10] 
 
-1. Install [Xcode][10] 
+1. Open [terminal.app][7] and from the command line run the following commands:
 
 1. Install Homebrew:
 
