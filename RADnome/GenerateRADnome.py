@@ -359,7 +359,7 @@ class GenerateRADnome(Logging):
 
             count += 1
 
-        fout.close()
+        RANnome_out.close()
 
         # Send data for logging
         self.__contigs_2_RADnome__(run_results)
