@@ -18,6 +18,8 @@ Most linux distros as well as OS X should have python and git pre-installed.
 
 The easiest way to install the necessary dependencies on OS X is to use the [Homebrew package manager][1].
 
+1. Before you begin install [Xcode][10] 
+
 1. Open [terminal.app][7] and from the command line run the following commands:
 
 1. Install Homebrew:
@@ -56,6 +58,8 @@ The easiest way to install the necessary dependencies on OS X is to use the [Hom
 
 Installing the dependencies on a standard linux disro is a bit trickier than on OS X. You should be able to use `apt-get` to install [git][6]. For [tokyo cabinet][3], [samtools][4], [bowtie2][5], and [rainbow][9] you'll likely have to install from source. The instruction for [pysam][11] are the same as for OS X.
 
+Tokyo Cabinet can be a pain to install. I recommend using `deb` or `RPM` packages to install it if you can. For this reason we're working on removing it as a dependancy. 
+
 ## Install RADnome:
 
 [RADnome][8] is still in *beta* so we're suggesting that you clone the repository from github and install it using the *develop* flag. Rather than installing the software into the python libraries folder this approach creates symbolic links to the git repo. This way you can easily install new versions by *pulling* updates from the repo.
@@ -88,7 +92,6 @@ UnitTests are located in `RADnome/tests.py` and can be run with `nosetests` or t
 [7]: http://en.wikipedia.org/wiki/Terminal_(OS_X)
 [8]: radnome.org
 [9]: http://sourceforge.net/projects/bio-rainbow/
-[10]: http://www.python.org/download/releases/2.7.5/
-[11]: https://code.google.com/p/pysam/
+[10]: https://developer.apple.com/xcode/‎
 
 
