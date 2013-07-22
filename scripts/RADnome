@@ -20,7 +20,9 @@ sys.path.insert(0, os.path.abspath('..'))
 
 import sys
 import argparse
+from RADnome.pipeline import *
 from RADnome.GenerateRADnome import *
+
 
 
 def generate_READnome(args):
@@ -52,7 +54,10 @@ def get_args():
 
     parser = argparse.ArgumentParser(prog='RADnome')
 
+    # --------------------------------------
     # SETUP SUB-PARSERS
+    # --------------------------------------
+
     subparsers = parser.add_subparsers(title='subcommands',
                                        help='sub-command help')
 
@@ -179,7 +184,8 @@ def get_args():
     # SETUP runPipeline SUB-COMMAND
     # --------------------------------------
 
-    parser_pipeline.add_argument('--fqs',
+    parser_pipeline.add_argument(
+        '--fqs',
         type=str,
         nargs=2,
         help="Forward and reverse fastq files.")
@@ -196,7 +202,7 @@ def get_args():
         default=1,
         help="Number of processor cores for bowtie2 to use.")
 
-    # RUN APPROPRIATE SUB-COMMAND.
+    # LOGIC TO SELECT AND RUN APPROPRIATE SUB-COMMAND.
     parser_READnome.set_defaults(func=generate_READnome)
     parser_ascContigs.set_defaults(func=assoicate_contigs)
     parser_RADnome.set_defaults(func=generate_RADnome)
