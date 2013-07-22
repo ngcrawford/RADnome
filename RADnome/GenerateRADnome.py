@@ -15,22 +15,14 @@ Add later.
 
 
 import os
-import sys
 import gzip
-import math
-import shlex
-import glob
-import shutil
-import numpy
 import pysam
-import argparse
 import datetime
 import textwrap
 import collections
 import cPickle as pickle
 from fileindex import FileIndex
-from subprocess import Popen, PIPE
-from collections import defaultdict, Counter
+from collections import defaultdict
 
 
 class SamLine(object):
@@ -65,7 +57,7 @@ class Logging(object):
 
         self.today = datetime.date.today()
 
-    def __associate_contigs_log__(self, results_dict):
+    def __associate_contigs_log__(self, results_dict, path):
 
         results_dict["prop_asc"] =  float(results_dict["passed_filter"]) / results_dict["total_queries"]
 
@@ -89,13 +81,15 @@ class Logging(object):
         txt = textwrap.dedent(txt)
 
         outfile = self.today.strftime('ascRADnom.%m%d%y.log')
+
+        outfile = os.path.join(path, outfile)
         outfile = open(outfile, 'w')
         outfile.write(txt)
-
+        outfile.close()
         pass
 
 
-    def __contigs_2_RADnome__(self, results_dict):
+    def __contigs_2_RADnome__(self, results_dict, path):
 
         results_dict["mean_unique_asc"] = float(results_dict["unique_associations"]) / results_dict['rad_frag_count']
         results_dict["mode_diff"] = float(results_dict["mode_diff"]) / results_dict['potential_rad_frags']
@@ -130,8 +124,10 @@ class Logging(object):
         txt = textwrap.dedent(txt)
 
         outfile = self.today.strftime('makeRADnome.%m%d%y.log')
+        outfile = os.path.join(path, outfile)
         outfile = open(outfile, 'w')
         outfile.write(txt)
+        outfile.close()
         pass
 
 
@@ -181,7 +177,6 @@ class GenerateRADnome(Logging):
         """Provide input and output file names as well as the number of Ns to insert
            between contigs.
         """
-
         rainbow_clustered_fin = self.__open_files__(rainbow_clustered_fin, 'rb')
 
         with rainbow_clustered_fin as fin:
@@ -193,11 +188,13 @@ class GenerateRADnome(Logging):
             seq_start = 0
 
             # PREP OUTPUT FILE
-            fout = self.__open_files__(pseudo_genome_fout,'w')
+            fout = self.__open_files__(pseudo_genome_fout, 'w')
             fout.write('>{0}\n'.format(run_name))
 
             # PREP CONTIG POSITIONS OUTPUT FILE
-            contig_starts_log = open('{}.contig_start_pos.txt'.format(run_name), 'w')
+            path = os.path.split(pseudo_genome_fout)[0]
+            contig_starts_log = os.path.join(path, '{}.contig_start_pos.txt'.format(run_name))
+            contig_starts_log = open(contig_starts_log, 'w')
 
             # ITERATE OVER RAINBOW ASSEMBLY
             for count, line in enumerate(fin):
@@ -229,6 +226,7 @@ class GenerateRADnome(Logging):
             fout.write("\n")
             fout.close()
             contig_starts_log.close()
+            return 1
 
     def filter_contigs(self, c, p):
         """"""
@@ -256,13 +254,16 @@ class GenerateRADnome(Logging):
                 cons += 'C'
             else:
                 cons += s
+
         return cons
 
 
     def contigs_2_RADnome(self, rad1, rad2, r1_contig_len,
                           r2_contig_len, contig_2_contig_dict,
-                          run_name, N_padding, insert_size, proportion):
+                          run_name, N_padding, insert_size,
+                          proportion, out_path=None):
 
+        C = ContigAssembler()
         run_results = {
             "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
             "pickle": contig_2_contig_dict,
@@ -288,11 +289,27 @@ class GenerateRADnome(Logging):
         r2 = pysam.Fastafile(rad2)
 
         RANnome_out = run_name + ".RADnome.fa"
-        run_results['RANnome_out'] = RANnome_out
-        RANnome_out = open(RANnome_out, 'w')
 
         Singtons_nome_out = run_name + ".R1_R2.fa"
-        Singtons_nome_out = open(Singtons_nome_out, 'w')
+        Contig_nome_out = run_name  + ".merged_contigs.fa"
+        run_results['RANnome_out'] = RANnome_out
+
+        if out_path is not None:
+
+            RANnome_out = os.path.join(out_path, RANnome_out)
+            RANnome_out = open(RANnome_out, 'w')
+
+            Singtons_nome_out = os.path.join(out_path, Singtons_nome_out)
+            Singtons_nome_out = open(Singtons_nome_out, 'w')
+
+            Contig_nome_out = os.path.join(out_path, Contig_nome_out)
+            Contig_nome_out = open(Contig_nome_out, 'w')
+
+        else:
+
+            RANnome_out = open(RANnome_out, 'w')
+            Singtons_nome_out = open(Singtons_nome_out, 'w')
+            Contig_nome_out = open(Contig_nome_out, 'w')
 
         c2c = pickle.load(open(contig_2_contig_dict, 'rb'))
 
@@ -300,7 +317,9 @@ class GenerateRADnome(Logging):
         rad_frag_count = 0
         RADnome_pos = 0
         singletons_pos = 0
+        contigs_pos = 0
         seq_start = 1
+
         for key, value in c2c.iteritems():
             run_results["potential_rad_frags"] += 1
             if key == 0:           # skip zero key as this may be where 'unalignable fragments' get put.
@@ -313,7 +332,9 @@ class GenerateRADnome(Logging):
 
             # WRITE FASTA HEADER
             if count == 0:
-                RANnome_out.write('>{}\n'.format(run_name))
+                RANnome_out.write('>{}_NonOverlapping_PE_contigs\n'.format(run_name))
+                Contig_nome_out.write('>{}_Merged_PE_contigs\n'.format(run_name))
+                Singtons_nome_out.write('>{}_Singleton_contigs\n'.format(run_name))
 
             # ASSOCIATE CONTIG PAIRS
             if self.filter_contigs(counts, proportion) >= proportion:
@@ -327,22 +348,35 @@ class GenerateRADnome(Logging):
                 contig1 = r1.fetch(r1_name, key, key+r1_contig_len)
                 contig2 = r2.fetch(r2_name, mode[0], mode[0]+r2_contig_len)
 
+
                 # RAINBOW orientation is reversed for the R1 reads
                 # so it is necessary to flip contig1's oriention
                 # ToDo: Make this generalized based on the SAM alignments
                 contig1 = contig1[::-1]
                 contig1 = self.__make_consensus__(contig1)
 
-                # ADD FRAGMENTS TO RADNOME
-                pos1 = self._append_to_pseudo_genome_(bigNs, RANnome_out, RADnome_pos, span=80)
-                pos2 = self._append_to_pseudo_genome_(contig1, RANnome_out, pos1, span=80)
-                pos3 = self._append_to_pseudo_genome_(smallNs, RANnome_out, pos2, span=80)
-                pos4 = self._append_to_pseudo_genome_(contig2, RANnome_out, pos3, span=80)
 
-                #print (seq_start + pos1 + pos2), (seq_start + pos1 + pos2 + pos3 + pos4)
+                assembly_results = C.assemble_contigs(contig1[::-1], contig2[::-1])
 
-                RADnome_pos = pos4
-                seq_start += pos4
+                if assembly_results is not None:
+                    assembled_contig = assembly_results[0]
+                    # ADD FRAGMENTS TO CONTIG NOME
+                    pos1 = self._append_to_pseudo_genome_(bigNs, Contig_nome_out, contigs_pos, span=80)
+                    pos2 = self._append_to_pseudo_genome_(assembled_contig, Contig_nome_out, pos1, span=80)
+                    contigs_pos = pos2
+
+                else:
+
+                    # ADD FRAGMENTS TO RADNOME
+                    pos1 = self._append_to_pseudo_genome_(bigNs, RANnome_out, RADnome_pos, span=80)
+                    pos2 = self._append_to_pseudo_genome_(contig1, RANnome_out, pos1, span=80)
+                    pos3 = self._append_to_pseudo_genome_(smallNs, RANnome_out, pos2, span=80)
+                    pos4 = self._append_to_pseudo_genome_(contig2, RANnome_out, pos3, span=80)
+
+                    #print (seq_start + pos1 + pos2), (seq_start + pos1 + pos2 + pos3 + pos4)
+
+                    RADnome_pos = pos4
+                    seq_start += pos4
 
             # PROCESS R1s
             else:
@@ -362,7 +396,11 @@ class GenerateRADnome(Logging):
         RANnome_out.close()
 
         # Send data for logging
-        self.__contigs_2_RADnome__(run_results)
+        if out_path == None:
+            out_path = os.getcwd()
+
+        self.__contigs_2_RADnome__(run_results, out_path)
+        return 1
 
 
 class MergeAssemblies(Logging):
@@ -409,7 +447,7 @@ class MergeAssemblies(Logging):
         fi = FileIndex(sam2, SamLine, allow_multiple=True)
         ma = MergeAssemblies()
 
-        contig_starts = [int(l.strip()) for l in open(contig_positions, 'rU')]
+        #contig_starts = [int(l.strip()) for l in open(contig_positions, 'rU')]
 
         with open(sam1, 'rU') as qs:
 
@@ -450,7 +488,8 @@ class MergeAssemblies(Logging):
         # UPDATE RUN RESULTS AND GENERATE LOGFILE
         run_results["total_queries"] = count
         run_results['pickle'] = pkl_output_file_name
-        self.__associate_contigs_log__(run_results)        # format logging results
+        self.__associate_contigs_log__(run_results, path)        # format logging results
+        return 1
 
 
 
@@ -516,7 +555,7 @@ class ContigAssembler(object):
     """Code for assembling contigs.
 
         Because Travis Glenn made me do it. :)"""
-    def __init__(self, arg):
+    def __init__(self):
         super(ContigAssembler, self).__init__()
 
     def count_matches(self, a, b):
@@ -550,9 +589,9 @@ class ContigAssembler(object):
         chars = len(z) + 1
         for i in range(1, chars):
             a, b = z[(-1 * i):], y[:i]
-            count_matches(a, b)
+            self.count_matches(a, b)
 
-            algn = map(self.is_match, count_matches(a, b))
+            algn = map(self.is_match, self.count_matches(a, b))
 
             padding = " "*((chars - 1) - i)
             #print algn.count(0),"{}{}".format(padding, y)
@@ -565,308 +604,9 @@ class ContigAssembler(object):
         mpos = self.get_max_overlap(mismatch_list)
         if mpos is not None:
             assembled_contigs = z + y[mpos+1:]
-            return assembled_contigs
+            return (assembled_contigs, mpos)
         else:
             return mpos
-
-class RunPipeline(object):
-    """docstring for RunPipeline"""
-    def __init__(self):
-        super(RunPipeline, self).__init__()
-
-
-    def run_cluster_cmd(self, fq_id):
-
-        cli = "rainbow cluster -1 {0}".format(fq_id)
-        cli_list = shlex.split(cli)
-        line, err = Popen(cli_list,
-                          stdin=PIPE,
-                          stdout=open("{}.cluster.out".format(fq_id), 'w'),
-                          stderr=PIPE).communicate()
-        return 1
-
-    def run_div_cmd(self, fq_id, out_path=None):
-
-        if out_path != None:
-            fout_name = os.path.split(fq_id)[-1]
-            fout = os.path.join(out_path, fout_name)
-        else:
-            fout = os.path.split(fq_id)[-1]
-
-        cli = "rainbow div -i {0}.cluster.out -o {1}.div.out".format(fq_id, fout)
-        cli_list = shlex.split(cli)
-        line, err = Popen(cli_list,
-                          stdin=PIPE,
-                          stdout=PIPE,
-                          stderr=PIPE).communicate()
-        return 1
-
-
-    def run_merge_cmd(self, fq_id, out_path=None):
-
-        if out_path != None:
-            fout_name = os.path.split(fq_id)[-1]
-            fout = os.path.join(out_path, fout_name)
-        else:
-            fout = os.path.split(fq_id)[-1]
-
-        cli = "rainbow merge -a -i {0}.div.out -o {1}.asm.out".format(fq_id, fout)
-        cli_list = shlex.split(cli)
-        line, err = Popen(cli_list,
-                          stdin=PIPE,
-                          stdout=PIPE,
-                          stderr=PIPE).communicate()
-        return 1
-
-    def run_gzip(self, fq_id):
-
-        cli = "gzip {0}".format(fq_id)
-        cli_list = shlex.split(cli)
-        line, err = Popen(cli_list,
-                          stdin=PIPE,
-                          stdout=PIPE,
-                          stderr=PIPE).communicate()
-        return 1
-
-    def make_READnome(self, fq_id, run_ID, buff=500, out_path=None):
-
-        if out_path != None:
-            fout_name = os.path.split(fq_id)[-1]
-            fout = os.path.join(out_path, fout_name)
-        else:
-            fout = os.path.split(fq_id)[-1]
-
-        asm = "{}.asm.out".format(fout)
-        fa = "{}.asm.fa".format(fout)
-
-        G = GenerateRADnome()
-        G.make_pseudo_genome(asm, fa, buff, run_ID)
-        return 1
-
-    def run_bowtie2(self, fq_id, cores, out_path=None):
-
-        if out_path != None:
-            fout_name = os.path.split(fq_id)[-1]
-            fout = os.path.join(out_path, fout_name)
-        else:
-            fout = os.path.split(fq_id)[-1]
-
-        cli = "bowtie2-build -f {0}.asm.fa {0}.asm".format(fout)
-        cli_list = shlex.split(cli)
-        line, err = Popen(cli_list,
-                          stdin=PIPE,
-                          stdout=PIPE,
-                          stderr=PIPE).communicate()
-
-        cli = "bowtie2 \
-               --very-sensitive \
-               --end-to-end \
-               -p {1} \
-               -x {0}.asm \
-               -U {2}".format(fout, cores, fq_id)
-
-        cli_list = shlex.split(cli)
-        line, err = Popen(cli_list,
-                          stdin=PIPE,
-                          stdout=open("{}.sam".format(fout), 'w'),
-                          stderr=PIPE).communicate()
-        return 1
-
-    def create_faidx(self, fa, out_path=None):
-
-        # if out_path != None:
-        #     fout_name = os.path.split(fa)[-1]
-        #     fout = os.path.join(out_path, fout_name)
-        # else:
-        #     fout = os.path.split(fa)[-1]
-
-        cli = "samtools faidx {}".format(fa)
-        cli_list = shlex.split(cli)
-        line, err = Popen(cli_list,
-                          stdin=PIPE,
-                          stdout=PIPE,
-                          stderr=PIPE).communicate()
-
-
-    def sam_to_sorted_sam(self, fq_id, out_path=None):
-
-        if out_path != None:
-            fout_name = os.path.split(fq_id)[-1]
-            fout = os.path.join(out_path, fout_name)
-        else:
-            fout = os.path.split(fq_id)[-1]
-
-        cli = "samtools view -bS {}.sam".format(fout)
-        cli_list = shlex.split(cli)
-        line, err = Popen(cli_list,
-                          stdin=PIPE,
-                          stdout=open("{}.bam".format(fout), 'wb'),
-                          stderr=PIPE).communicate()
-
-        cli = "samtools sort {0}.bam {0}.sorted".format(fout)
-        cli_list = shlex.split(cli)
-        line, err = Popen(cli_list,
-                          stdin=PIPE,
-                          stdout=PIPE,
-                          stderr=PIPE).communicate()
-
-        cli = "samtools view -h {0}.sorted.bam".format(fout)
-        cli_list = shlex.split(cli)
-        line, err = Popen(cli_list,
-                          stdin=PIPE,
-                          stdout=open("{0}.sorted.sam".format(fout), 'w'),
-                          stderr=PIPE).communicate()
-        return 1
-
-    def ascContigs(self, fq1, fq2, run_ID, min_mapq, out_path=None):
-
-        if out_path != None:
-            fout1 = os.path.split(fq1)[-1]
-            fout2 = os.path.split(fq2)[-1]
-
-            fout1 = os.path.join(out_path, fout1)
-            fout2 = os.path.join(out_path, fout2)
-
-            run_ID = os.path.join(out_path, run_ID)
-        else:
-            fout1 = os.path.split(fq1)[-1]
-            fout2 = os.path.split(fq2)[-1]
-
-        sam1 = "{}.sorted.sam".format(fout1)
-        sam2 = "{}.sorted.sam".format(fout2)
-
-        contig_positions = "{}.R1.contig_start_pos.txt".format(run_ID)
-
-        M = MergeAssemblies()
-        log = M.associate_contigs(sam1, sam2, contig_positions, min_mapq, run_ID)
-        return 1
-
-    def make_RADnome(self, fq1, fq2, run_ID, out_path=None):
-
-        def seq_len(fq):
-            with open(fq,'rU') as fin:
-                fin.readline()
-                return len(fin.readline().strip())
-
-        if out_path != None:
-            fout1 = os.path.split(fq1)[-1]
-            fout2 = os.path.split(fq2)[-1]
-
-            fout1 = os.path.join(out_path, fout1)
-            fout2 = os.path.join(out_path, fout2)
-
-            run_ID = os.path.join(out_path, run_ID)
-        else:
-            fout1 = os.path.split(fq1)[-1]
-            fout2 = os.path.split(fq2)[-1]
-
-        rad1 = "{}.asm.fa".format(fout1)
-        rad2 = "{}.asm.fa".format(fout2)
-
-        r1_contig_len = seq_len(fq1)
-        r2_contig_len = seq_len(fq2)
-
-        contig_2_contig_dict = "{}.R1_to_R2_contig_associations.pkl".format(run_ID)
-        run_name = run_ID
-        N_padding = 500
-        insert_size = 50
-        proportion = 0.8
-
-        print 'here', rad1
-
-        self.create_faidx(rad1)
-        self.create_faidx(rad2)
-
-        G = GenerateRADnome()
-        G.contigs_2_RADnome(rad1, rad2, r1_contig_len,
-                  r2_contig_len, contig_2_contig_dict,
-                  run_name, N_padding, insert_size, proportion)
-        return 1
-
-    def tidy_dir(self, fq1):
-
-        if os.path.exists('bowtie2/') is False:
-            os.mkdir("bowtie2")
-
-        a = [shutil.move(f, 'bowtie2/') for f in glob.glob('*.bt2')]
-
-        if os.path.exists('alignments/') is False:
-            os.mkdir("alignments")
-
-        a = [shutil.move(f, 'alignments/') for f in glob.glob('*.sam')]
-        a = [shutil.move(f, 'alignments/') for f in glob.glob('*.bam')]
-        a = [shutil.move(f, 'alignments/') for f in glob.glob('*.fidx')]
-
-
-        if os.path.exists('fastas/') is False:
-            os.mkdir("fastas")
-
-        a = [shutil.move(f, 'fastas/') for f in glob.glob('*.fa')]
-        a = [shutil.move(f, 'fastas/') for f in glob.glob('*.fai')]
-        a = [shutil.move(f, 'fastas/') for f in glob.glob('*.contig_start*')]
-        a = [shutil.move(f, 'fastas/') for f in glob.glob('*.pkl')]
-
-        if os.path.exists('rainbow/') is False:
-            os.mkdir("rainbow")
-
-        a = [shutil.move(f, 'rainbow/') for f in glob.glob('*.out')]
-
-        if os.path.exists('logs/') is False:
-            os.mkdir("logs")
-
-        a = [shutil.move(f, 'logs/') for f in glob.glob('*.log')]
-        return 1
-
-    def pipeline(self, fq1, fq2, run_ID, cores=3):
-
-        # -----------
-        # Run Rainbow
-        # -----------
-
-        sys.stdout.write("""Generating {0} on {1}\n\n""".format(run_ID, datetime.date.today()))
-
-        sys.stdout.write("Step 1: Running Rainbow Cluster ...\n")
-        self.run_cluster_cmd(fq1)
-        self.run_cluster_cmd(fq2)
-
-        sys.stdout.write("Step 2: Running Rainbow Div ...\n")
-        self.run_div_cmd(fq1)
-        self.run_div_cmd(fq2)
-
-        sys.stdout.write("Step 3: Running Rainbow Merge ...\n")
-        self.run_merge_cmd(fq1)
-        self.run_merge_cmd(fq2)
-
-        # -------------------------------
-        # Generate READnomes and RADnomes
-        # -------------------------------
-
-        sys.stdout.write("Step 4: Creating R1 and R2 READnomes ...\n")
-        self.make_READnome(fq1, "{}.R1".format(run_ID))
-        self.make_READnome(fq2, "{}.R2".format(run_ID))
-
-
-        sys.stdout.write("Step 5: Running Bowtie2 ...\n")
-
-        sys.stdout.write("  .. aligning {}\n".format(fq1))
-        self.run_bowtie2(fq1, cores)
-
-        sys.stdout.write("  .. aligning {}\n".format(fq2))
-        self.run_bowtie2(fq2, cores)
-
-
-        sys.stdout.write("Step 6: Creating sorted BAMs ...\n")
-        self.sam_to_sorted_sam(fq1)
-        self.sam_to_sorted_sam(fq2)
-
-        sys.stdout.write("Step 7: Associating contigs ...\n")
-        self.ascContigs(fq1, fq2, run_ID, min_mapq=3)
-
-        sys.stdout.write("Step 8: Create RADnome ...\n")
-        self.make_RADnome(fq1, fq2, run_ID)
-
-        sys.stdout.write("Step 9: Organize directory ...\n")
-        # self.tidy_dir(fq1)
 
 if __name__ == '__main__':
     pass
