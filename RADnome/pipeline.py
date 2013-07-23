@@ -94,7 +94,7 @@ class RunPipeline(object):
         fa = "{}.asm.fa".format(fout)
 
         G = GenerateRADnome()
-        G.make_pseudo_genome(asm, fa, buff, run_ID)
+        G.make_READnome(asm, fa, buff, run_ID, out_path)
         return 1
 
     def run_bowtie2(self, fq_id, cores, out_path=None):
@@ -124,6 +124,9 @@ class RunPipeline(object):
                           stdin=PIPE,
                           stdout=open("{}.sam".format(fout), 'w'),
                           stderr=PIPE).communicate()
+
+        err_out = open('{}.bwt2.error.log'.format(fq_id), 'w')
+        [err_out.write(line) for line in err]
         return 1
 
     def create_faidx(self, fa, out_path=None):
