@@ -21,17 +21,17 @@ class TestCmds(unittest.TestCase):
     def setUpClass(self):
         """Define shared variables, classes, and decompress tar.gz"""
 
-        # Variables
+        # Setup Variables
         self.run_ID = 'test'
         self.min_mapq = 3
 
-        # Classes
+        # Setup Classes
         self.P = pipeline.RunPipeline()
         self.C = GenerateRADnome.ContigAssembler()
         self.M = GenerateRADnome.MergeAssemblies()
         self.G = GenerateRADnome.GenerateRADnome()
 
-        # Decompress tar.gz (using TarFile module caused issue)
+        # Decompress tar.gz (using TarFile module caused issues)
         module_dir = os.path.dirname(GenerateRADnome.__file__)
         self.base_dir = os.path.split(module_dir)[0]
         self.test_data = os.path.join(self.base_dir, "tests/data")
@@ -45,13 +45,20 @@ class TestCmds(unittest.TestCase):
                           stdout=PIPE,
                           stderr=PIPE).communicate()
 
+        # Make tmp dir (TO DO redo with 'real' tempdir)
+        os.mkdir(os.path.join(self.base_dir, "tests/data/tmp"))
+
         # Reset working directory
         os.chdir(self.base_dir)
 
-    # @classmethod
-    # def tearDownClass(self):
-    #     self.test_data = os.path.join(self.base_dir, "tests/data/data")
-    #     shutil.rmtree(self.test_data)
+    @classmethod
+    def tearDownClass(self):
+        """Clean up the mess (e.g., data and tmp dir)"""
+
+        test_data = os.path.join(self.base_dir, "tests/data/data")
+        shutil.rmtree(test_data)
+        tmp = os.path.join(self.base_dir, "tests/data/tmp")
+        shutil.rmtree(tmp)
 
     def test_cluster_cmd(self):
         """Test rainbow clustering wrapper."""
