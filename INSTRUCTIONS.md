@@ -106,7 +106,7 @@ We're still working on the post analysis code, but the basic steps are the follo
 
 Currently we're recommending that users align their reads using bowtie2 since bowtie2 provides a nice trade off between speed and senstitivity.
 
-**Example commands:*** More details can be found [here][12].
+**Example commands:** More details can be found [here][12].
 
     bowtie2-build RADnome.fa RADnome
     bowtie2 \
@@ -123,11 +123,23 @@ Currently we're recommending that users align their reads using bowtie2 since bo
 
 A couple of important things to note:
 
-It's very important that the read group (RG) info be specified. You'll need to know the plate ID and line for each sample. This info can usually be obtained by looking at the first fastq sequences.
+It's very important that the read group (RG) info be specified as GATK won't run without it. To specify the RG flags propperly, you'll need to know the plate ID and line for each sample. This info can usually be obtained by looking at the fastq sequence read IDs.
 
 For example the following read ID is from plate D0T4UACXX lane 3.
 
-@9L6V3M1:312:**D0T4UACXX**:**3**:1101:5166:1969/2
+> @9L6V3M1:312:**D0T4UACXX**:**3**:1101:5166:1969/2
+
+You'll also need to run each sample
+
+
+MORE HERE.
+
+Prep sams for GATK:
+
+    samtools view -Sb aligned.sam > aligned.bam
+    samtools sort aligned.bam aligned.sorted
+    samtools index aligned.sorted.bam
+
 
 
 
