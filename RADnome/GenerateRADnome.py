@@ -14,6 +14,7 @@ Add later.
 """
 
 
+import copy
 import os
 import gzip
 import pysam
@@ -57,9 +58,40 @@ class Logging(object):
 
         self.today = datetime.date.today()
 
+
+    def __make_READnome_log__(self, results_dict, path):
+
+        results_dict['contig_count'] = len(results_dict["seq_lengths"])
+        results_dict['mean_contig_len'] = sum(results_dict["seq_lengths"]) / float(len(results_dict["seq_lengths"]))
+
+        txt = """\
+        Ran 'makeREADnome' as {0[run_name]} on {0[date]}
+
+          Rainbow Assembly: {0[fin]}
+
+          Pseudo Genome: {0[fout]}
+
+          Length of N padding: {0[Ns]:g}
+
+        Basic Stats:
+
+          Total Contigs: {0[contig_count]:g}
+          Mean Contig length: {0[mean_contig_len]}
+
+        """.format(results_dict)
+
+        txt = textwrap.dedent(txt)
+
+        outfile = self.today.strftime('makeREADnome.{}.%m%d%y.log'.format(results_dict["fin"]))
+        outfile = os.path.join(path, outfile)
+        outfile = open(outfile, 'w')
+        outfile.write(txt)
+        outfile.close()
+        pass
+
     def __associate_contigs_log__(self, results_dict, path):
 
-        results_dict["prop_asc"] =  float(results_dict["passed_filter"]) / results_dict["total_queries"]
+        results_dict["prop_asc"] = float(results_dict["passed_filter"]) / results_dict["total_queries"]
 
         txt = """\
         Ran 'ascContigs' on {0[date]}
@@ -136,10 +168,6 @@ class GenerateRADnome(Logging):
     def __init__(self):
         super(GenerateRADnome, self).__init__()
 
-    run_info = {"Total clusters": 0,
-                'seq_lengths': []
-                }
-
     def __split_len__(self, seq, length):
         return [seq[i:i+length] for i in range(0, len(seq), length)]
 
@@ -173,10 +201,19 @@ class GenerateRADnome(Logging):
             return len(chunks[-1])
 
 
-    def make_pseudo_genome(self, rainbow_clustered_fin, pseudo_genome_fout, Ns, run_name):
+    def make_READnome(self, rainbow_clustered_fin, pseudo_genome_fout, Ns, run_name, out_path=None):
         """Provide input and output file names as well as the number of Ns to insert
            between contigs.
         """
+
+        results_dict = {"date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "fin": rainbow_clustered_fin,
+                        "fout": pseudo_genome_fout,
+                        "Ns": Ns,
+                        "run_name": run_name,
+                        "seq_lengths": []
+                        }
+
         rainbow_clustered_fin = self.__open_files__(rainbow_clustered_fin, 'rb')
 
         with rainbow_clustered_fin as fin:
@@ -200,12 +237,15 @@ class GenerateRADnome(Logging):
             for count, line in enumerate(fin):
 
                 if line.startswith('E') is True:
-                    self.run_info["Total clusters"] += 1
 
                     if id_count != 0:
 
                         seq = current_cluster["S"][0]
-                        self.run_info['seq_lengths'].append(len(seq))
+
+                        if seq == 'N': # skip empty sequences.
+                            continue
+
+                        results_dict["seq_lengths"].append(len(seq))
 
                         previous_pos = self._append_to_pseudo_genome_(seq, fout, previous_pos)
 
@@ -225,7 +265,13 @@ class GenerateRADnome(Logging):
 
             fout.write("\n")
             fout.close()
-            contig_starts_log.close()
+
+
+            # Send data for logging
+            if out_path == None:
+                out_path = os.getcwd()
+
+            self.__make_READnome_log__(results_dict, out_path)
             return 1
 
     def filter_contigs(self, c, p):
@@ -322,6 +368,7 @@ class GenerateRADnome(Logging):
 
         for key, value in c2c.iteritems():
             run_results["potential_rad_frags"] += 1
+
             if key == 0:           # skip zero key as this may be where 'unalignable fragments' get put.
                 continue
 
@@ -348,7 +395,6 @@ class GenerateRADnome(Logging):
                 contig1 = r1.fetch(r1_name, key, key+r1_contig_len)
                 contig2 = r2.fetch(r2_name, mode[0], mode[0]+r2_contig_len)
 
-
                 # RAINBOW orientation is reversed for the R1 reads
                 # so it is necessary to flip contig1's oriention
                 # ToDo: Make this generalized based on the SAM alignments
@@ -358,21 +404,20 @@ class GenerateRADnome(Logging):
                 assembly_results = C.assemble_contigs(contig1[::-1], contig2[::-1])
 
                 if assembly_results is not None:
-                    assembled_contig = assembly_results[0]
+
+                    assembled_contig = assembly_results
+
                     # ADD FRAGMENTS TO CONTIG NOME
                     pos1 = self._append_to_pseudo_genome_(bigNs, Contig_nome_out, contigs_pos, span=80)
                     pos2 = self._append_to_pseudo_genome_(assembled_contig, Contig_nome_out, pos1, span=80)
                     contigs_pos = pos2
 
                 else:
-
                     # ADD FRAGMENTS TO RADNOME
                     pos1 = self._append_to_pseudo_genome_(bigNs, RANnome_out, RADnome_pos, span=80)
                     pos2 = self._append_to_pseudo_genome_(contig1, RANnome_out, pos1, span=80)
                     pos3 = self._append_to_pseudo_genome_(smallNs, RANnome_out, pos2, span=80)
                     pos4 = self._append_to_pseudo_genome_(contig2, RANnome_out, pos3, span=80)
-
-                    #print (seq_start + pos1 + pos2), (seq_start + pos1 + pos2 + pos3 + pos4)
 
                     RADnome_pos = pos4
                     seq_start += pos4
@@ -385,7 +430,8 @@ class GenerateRADnome(Logging):
                 pos1 = self._append_to_pseudo_genome_(bigNs, Singtons_nome_out, singletons_pos, span=80)
                 pos2 = self._append_to_pseudo_genome_(contig1, Singtons_nome_out, pos1, span=80)
 
-                # print (seq_start + pos1 + pos2)
+                contig2 = r2.fetch(r2_name, mode[0], mode[0]+r2_contig_len)
+
 
                 singletons_pos = pos2
                 #seq_start += pos2
@@ -588,10 +634,10 @@ class ContigAssembler(object):
             algn = map(self.is_match, self.make_pairs(a, b))
 
             padding = " "*((chars - 1) - i)
-            print algn.count(0),"{}{}".format(padding, y) # print statements show what is going on.
+            #print algn.count(0),"{}{}".format(padding, y) # print statements show what is going on.
 
             match_str = ''.join(map(str, algn))
-            print algn.count(0), "{}{}".format(padding, match_str)
+            #print algn.count(0), "{}{}".format(padding, match_str)
 
             mismatch_list.append(algn.count(0))
 
@@ -600,13 +646,14 @@ class ContigAssembler(object):
 
         # merge reads.
         if mpos is not None:
+
             assembled_contigs = z + y[mpos+1:]
             proportion_overlapped = float(mpos)/len(assembled_contigs)
 
             if proportion_overlapped >= overlap:
                 return assembled_contigs
             else:
-                return mpos
+                return None
         else:
             return mpos
 
