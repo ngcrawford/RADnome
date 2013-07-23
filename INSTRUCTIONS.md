@@ -60,28 +60,78 @@ Installing the dependencies on a standard linux disro is a bit trickier than on 
 
 Tokyo Cabinet can be a pain to install. I recommend using `deb` or `RPM` packages to install it if you can. For this reason we're working on removing it as a dependancy. 
 
-## Install RADnome:
+## Install or Update RADnome:
 
 [RADnome][8] is still in *beta* so we're suggesting that you clone the repository from github and install it using the *develop* flag. Rather than installing the software into the python libraries folder this approach creates symbolic links to the git repo. This way you can easily install new versions by *pulling* updates from the repo.
 
-        cd /to/the/directory/where/you/want/to/put/the/RADnome/Source
-        git clone https://github.com/ngcrawford/RADnome
-        cd RADnome
-        python setup.py develop
+    cd /to/the/directory/where/you/want/to/put/the/RADnome/Source/Code
+    git clone https://github.com/ngcrawford/RADnome
+    cd RADnome
+    python setup.py develop
 
 ### Run UnitTests:
 
 UnitTests are located in `RADnome/tests.py` and can be run with `nosetests` or the following command:
 
-        python RADnome/tests.py
+    python RADnome/tests.py
 
 ### Run command on test data:
 
-        cd tests/data/
-        RADnome runPipeline \
-        --fqs fq1.10k.fq fq2.10k.fq \
-        --run-name test_run \
-        --cores 3
+    cd tests/data/
+    RADnome runPipeline \
+    --fqs fq1.10k.fq fq2.10k.fq \
+    --run-name test_run \
+    --cores 3
+
+Because RADnome was installed using the develop flag these changes immediately populate throughout the system.
+
+### Updating RADnome:
+
+To update the RADnome code to the newest version you just need to pull the changes from the repo. Since you installed RADnome using the `develop` flag these changes will populate through out your system.
+
+    cd /to/the/directory/where/you/put/the/RADnome/Source/Code
+    git pull origin master
+
+Once RADnome becomes more stable we will also tag the repo with releases as well as putting the code on pypi.
+
+## Post Analysis
+
+We're still working on the post analysis code, but the basic steps are the following
+
+1. Align reads
+2. Infer genotypes
+3. Generate population stats
+
+### Aligning Reads:
+
+Currently we're recommending that users align their reads using bowtie2 since bowtie2 provides a nice trade off between speed and senstitivity.
+
+**Example commands:*** More details can be found [here][12].
+
+    bowtie2-build RADnome.fa RADnome
+    bowtie2 \
+    --very-sensitive-local \
+    --rg ID:Plate.lane \
+    --rg SM:sample_id \
+    --rg LB:library_id \
+    --rg PL:ILLUMINA \
+    --rg-id Plate.lane \
+    -x RADnome \
+    -1 fastq1.1.fa \
+    -2 fastq1.2.fa \
+    > aligned.sam
+
+A couple of important things to note:
+
+It's very important that the read group (RG) info be specified. You'll need to know the plate ID and line for each sample. This info can usually be obtained by looking at the first fastq sequences.
+
+For example the following read ID is from plate D0T4UACXX lane 3.
+
+@9L6V3M1:312:**D0T4UACXX**:**3**:1101:5166:1969/2
+
+
+
+
 
 [1]: http://mxcl.github.io/homebrew/
 [2]: https://github.com/Homebrew/homebrew-science
@@ -93,5 +143,7 @@ UnitTests are located in `RADnome/tests.py` and can be run with `nosetests` or t
 [8]: radnome.org
 [9]: http://sourceforge.net/projects/bio-rainbow/
 [10]: https://developer.apple.com/xcode/‎
+[11]: https://code.google.com/p/pysam/
+[12]: http://bowtie-bio.sourceforge.net/bowtie2/manual.shtml#command-line
 
 
