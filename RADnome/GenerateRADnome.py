@@ -355,7 +355,6 @@ class GenerateRADnome(Logging):
                 contig1 = contig1[::-1]
                 contig1 = self.__make_consensus__(contig1)
 
-
                 assembly_results = C.assemble_contigs(contig1[::-1], contig2[::-1])
 
                 if assembly_results is not None:
@@ -491,8 +490,6 @@ class MergeAssemblies(Logging):
         self.__associate_contigs_log__(run_results, path)        # format logging results
         return 1
 
-
-
     def __generate_test_data__(self, sam1, sam2, contig_positions, min_mapq):
 
 
@@ -518,8 +515,8 @@ class MergeAssemblies(Logging):
 
         contig_starts = [int(l.strip()) for l in open(contig_positions, 'rU')]
 
-        fq1_out = open("test_fq1.10k.fq",'w')
-        fq2_out = open("test_fq2.10k.fq",'w')
+        fq1_out = open("test_fq1.10k.fq", 'w')
+        fq2_out = open("test_fq2.10k.fq", 'w')
 
         with open(sam1, 'rU') as qs:
 
@@ -552,20 +549,18 @@ class MergeAssemblies(Logging):
 
 
 class ContigAssembler(object):
-    """Code for assembling contigs.
-
-        Because Travis Glenn made me do it. :)"""
+    """Code for assembling contigs."""
     def __init__(self):
         super(ContigAssembler, self).__init__()
 
-    def count_matches(self, a, b):
+    def make_pairs(self, a, b):
         """Make Pairs"""
         a = [i for i in a]
         b = [i for i in b]
         return zip(a, b)
 
     def is_match(self, pair):
-        """Test Pairs"""
+        """Test if pair is match."""
 
         if pair[0] == pair[1]:
             return 1
@@ -573,63 +568,49 @@ class ContigAssembler(object):
             return 0
 
     def get_max_overlap(self, mismatch_list):
+        """Identify the maximum overlap that has zero mismatches."""
 
-        pos = None
+        pos = None # Ensures that 'None' is returned if there is no valid overlap
         for count, i in enumerate(mismatch_list):
             if i is 0:
                 pos = count
         return pos
 
-    def assemble_contigs(self, z, y):
-        """
-        Ide
-        """
+    def assemble_contigs(self, z, y, overlap=None):
+        """ Do the assembly. Only merge contigs if the overlap produces zero mismatches."""
 
         mismatch_list = []
         chars = len(z) + 1
+
         for i in range(1, chars):
             a, b = z[(-1 * i):], y[:i]
-            self.count_matches(a, b)
 
-            algn = map(self.is_match, self.count_matches(a, b))
+            algn = map(self.is_match, self.make_pairs(a, b))
 
             padding = " "*((chars - 1) - i)
-            #print algn.count(0),"{}{}".format(padding, y)
+            print algn.count(0),"{}{}".format(padding, y) # print statements show what is going on.
 
             match_str = ''.join(map(str, algn))
-            #print algn.count(0), "{}{}".format(padding, match_str)
+            print algn.count(0), "{}{}".format(padding, match_str)
 
             mismatch_list.append(algn.count(0))
 
+        # identify position of max overlap
         mpos = self.get_max_overlap(mismatch_list)
+
+        # merge reads.
         if mpos is not None:
             assembled_contigs = z + y[mpos+1:]
-            return (assembled_contigs, mpos)
+            proportion_overlapped = float(mpos)/len(assembled_contigs)
+
+            if proportion_overlapped >= overlap:
+                return assembled_contigs
+            else:
+                return mpos
         else:
             return mpos
 
+
 if __name__ == '__main__':
     pass
-
-    # fq1 = "/home/ngcrawford/Data/Nearctic_Turtles/test_fq1.fq"
-    # fq2 = "/home/ngcrawford/Data/Nearctic_Turtles/test_fq2.fq"
-
-    # fq1 = "/Users/ngcrawford/Desktop/RADs/CalAcd/test_dir/test_fq1.10k.fq"
-    # fq2 = "/Users/ngcrawford/Desktop/RADs/CalAcd/test_dir/test_fq2.10k.fq"
-
-    # R = RunRainbow()
-    # R.run_rainbow(fq1, fq2, 'test_run')
-
-    # G = MergeAssemblies()
-    # sam1 = "/home/ngcrawford/Data/Nearctic_Turtles/test_data/neartic.trachemys.1.50k.sam"
-    # sam2 = "/home/ngcrawford/Data/Nearctic_Turtles/READ_aligments/sams/neartic.trachemys.2.sam"
-    # cntg_pos = "/home/ngcrawford/Data/Nearctic_Turtles/RADnome/neartic.trachemys.1.contig_start_pos.txt"
-    # G.__generate_test_data__(sam1, sam2, cntg_pos, min_mapq=3)
-
-
-
-
-    # ---------------------------------
-    #  Make test data
-    # ---------------------------------
 
