@@ -437,7 +437,12 @@ class GenerateRADnome(Logging):
                 #seq_start += pos2
 
             count += 1
+        Singtons_nome_out.write("\n")
+        Contig_nome_out.write("\n")
+        RANnome_out.write("\n")
 
+        Singtons_nome_out.close()
+        Contig_nome_out.close()
         RANnome_out.close()
 
         # Send data for logging
