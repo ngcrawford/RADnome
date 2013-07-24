@@ -90,7 +90,7 @@ class TestCmds(unittest.TestCase):
         buff = 500
         run_ID = self.run_ID
 
-        z = self.G.make_pseudo_genome(asm, fa, buff, run_ID)
+        z = self.G.make_READnome(asm, fa, buff, run_ID)
         self.assertTrue(z)
 
     def test_ascContigs(self):

@@ -8,9 +8,9 @@ Author: Nicholas Crawford
 Created by Nicholas Crawford on Mon Jun 17 15:35:51 PDT 2013
 Copyright (c) 2012 Nicholas G. Crawford All rights reserved.
 
-Description...
+Description:
 
-Add later.
+Runs the entire RADnome generation code as a pipeline.
 """
 
 import os
@@ -238,11 +238,20 @@ class RunPipeline(object):
                   run_name, N_padding, insert_size, proportion)
         return 1
 
-    def merge_fastas():
-        pass
+    def merge_fastas(self, run_ID):
+        Paired_nome_out = run_ID + ".paired_contigs.fa"
+        Singtons_nome_out = run_ID + ".singleton_R1_R2_contigs.fa"
+        Contig_nome_out = run_ID + ".assembled_contigs.fa"
 
+        cli = "cat {0} {1} {2}".format(Paired_nome_out, Contig_nome_out, Singtons_nome_out)
+        cli_list = shlex.split(cli)
+        line, err = Popen(cli_list,
+                          stdin=PIPE,
+                          stdout=open("{0}.RADnome.fa".format(run_ID), 'w'),
+                          stderr=PIPE).communicate()
+        return 1
 
-    def tidy_dir(self, fq1):
+    def tidy_dir(self, fq1, run_ID):
 
         if os.path.exists('bowtie2/') is False:
             os.mkdir("bowtie2")
@@ -260,7 +269,11 @@ class RunPipeline(object):
         if os.path.exists('fastas/') is False:
             os.mkdir("fastas")
 
-        a = [shutil.move(f, 'fastas/') for f in glob.glob('*.fa')]
+        fastas = glob.glob('*.fa')
+        fastas.remove("{}.RADnome.fa".format(run_ID))
+        print fastas
+
+        a = [shutil.move(f, 'fastas/') for f in fastas]
         a = [shutil.move(f, 'fastas/') for f in glob.glob('*.fai')]
         a = [shutil.move(f, 'fastas/') for f in glob.glob('*.contig_start*')]
         a = [shutil.move(f, 'fastas/') for f in glob.glob('*.pkl')]
@@ -323,6 +336,7 @@ class RunPipeline(object):
 
         sys.stdout.write("Step 8: Create RADnome ...\n")
         self.make_RADnome(fq1, fq2, run_ID)
+        self.merge_fastas(run_ID)
 
         sys.stdout.write("Step 9: Organize directory ...\n")
-        self.tidy_dir(fq1)
+        self.tidy_dir(fq1, run_ID)

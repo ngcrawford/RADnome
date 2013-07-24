@@ -81,8 +81,8 @@ class Logging(object):
         """.format(results_dict)
 
         txt = textwrap.dedent(txt)
-
-        outfile = self.today.strftime('makeREADnome.{}.%m%d%y.log'.format(results_dict["fin"]))
+        fin = os.path.split(results_dict["fin"])[-1]
+        outfile = self.today.strftime('makeREADnome.{}.%m%d%y.log'.format(fin))
         outfile = os.path.join(path, outfile)
         outfile = open(outfile, 'w')
         outfile.write(txt)
@@ -154,7 +154,6 @@ class Logging(object):
         """.format(results_dict)
 
         txt = textwrap.dedent(txt)
-
         outfile = self.today.strftime('makeRADnome.%m%d%y.log')
         outfile = os.path.join(path, outfile)
         outfile = open(outfile, 'w')
@@ -266,12 +265,7 @@ class GenerateRADnome(Logging):
             fout.write("\n")
             fout.close()
 
-
-            # Send data for logging
-            if out_path == None:
-                out_path = os.getcwd()
-
-            self.__make_READnome_log__(results_dict, out_path)
+            self.__make_READnome_log__(results_dict, path)
             return 1
 
     def filter_contigs(self, c, p):
@@ -334,16 +328,17 @@ class GenerateRADnome(Logging):
         r1 = pysam.Fastafile(rad1)
         r2 = pysam.Fastafile(rad2)
 
-        RANnome_out = run_name + ".RADnome.fa"
+        # MAKE OUTPUT FILENAMES
+        RADnome_out = run_name + ".paired_contigs.fa"
+        Singtons_nome_out = run_name + ".singleton_R1_R2_contigs.fa"
+        Contig_nome_out = run_name + ".assembled_contigs.fa"
 
-        Singtons_nome_out = run_name + ".R1_R2.fa"
-        Contig_nome_out = run_name  + ".merged_contigs.fa"
-        run_results['RANnome_out'] = RANnome_out
+        run_results['RADnome_out'] = RADnome_out
 
         if out_path is not None:
 
-            RANnome_out = os.path.join(out_path, RANnome_out)
-            RANnome_out = open(RANnome_out, 'w')
+            RADnome_out = os.path.join(out_path, RADnome_out)
+            RADnome_out = open(RADnome_out, 'w')
 
             Singtons_nome_out = os.path.join(out_path, Singtons_nome_out)
             Singtons_nome_out = open(Singtons_nome_out, 'w')
@@ -353,7 +348,7 @@ class GenerateRADnome(Logging):
 
         else:
 
-            RANnome_out = open(RANnome_out, 'w')
+            RADnome_out = open(RADnome_out, 'w')
             Singtons_nome_out = open(Singtons_nome_out, 'w')
             Contig_nome_out = open(Contig_nome_out, 'w')
 
@@ -379,8 +374,8 @@ class GenerateRADnome(Logging):
 
             # WRITE FASTA HEADER
             if count == 0:
-                RANnome_out.write('>{}_NonOverlapping_PE_contigs\n'.format(run_name))
-                Contig_nome_out.write('>{}_Merged_PE_contigs\n'.format(run_name))
+                RADnome_out.write('>{}_NonOverlapping_PE_contigs\n'.format(run_name))
+                Contig_nome_out.write('>{}_Assembled_PE_contigs\n'.format(run_name))
                 Singtons_nome_out.write('>{}_Singleton_contigs\n'.format(run_name))
 
             # ASSOCIATE CONTIG PAIRS
@@ -414,10 +409,10 @@ class GenerateRADnome(Logging):
 
                 else:
                     # ADD FRAGMENTS TO RADNOME
-                    pos1 = self._append_to_pseudo_genome_(bigNs, RANnome_out, RADnome_pos, span=80)
-                    pos2 = self._append_to_pseudo_genome_(contig1, RANnome_out, pos1, span=80)
-                    pos3 = self._append_to_pseudo_genome_(smallNs, RANnome_out, pos2, span=80)
-                    pos4 = self._append_to_pseudo_genome_(contig2, RANnome_out, pos3, span=80)
+                    pos1 = self._append_to_pseudo_genome_(bigNs, RADnome_out, RADnome_pos, span=80)
+                    pos2 = self._append_to_pseudo_genome_(contig1, RADnome_out, pos1, span=80)
+                    pos3 = self._append_to_pseudo_genome_(smallNs, RADnome_out, pos2, span=80)
+                    pos4 = self._append_to_pseudo_genome_(contig2, RADnome_out, pos3, span=80)
 
                     RADnome_pos = pos4
                     seq_start += pos4
@@ -437,13 +432,13 @@ class GenerateRADnome(Logging):
                 #seq_start += pos2
 
             count += 1
-        Singtons_nome_out.write("\n")
-        Contig_nome_out.write("\n")
-        RANnome_out.write("\n")
+        Singtons_nome_out.write("\n\n")
+        Contig_nome_out.write("\n\n")
+        RADnome_out.write("\n\n")
 
         Singtons_nome_out.close()
         Contig_nome_out.close()
-        RANnome_out.close()
+        RADnome_out.close()
 
         # Send data for logging
         if out_path == None:
@@ -542,7 +537,6 @@ class MergeAssemblies(Logging):
         return 1
 
     def __generate_test_data__(self, sam1, sam2, contig_positions, min_mapq):
-
 
         run_results = {
             "total_queries": 0,
