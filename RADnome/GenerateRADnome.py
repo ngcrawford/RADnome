@@ -13,10 +13,7 @@ Description...
 Add later.
 """
 
-
-
 import os
-import sys
 import gzip
 import pysam
 import datetime
@@ -470,6 +467,7 @@ class GenerateRADnome(Logging):
         # PROCESS R2s
         singletons_pos_R2 = 0
         r2_unassociated_contigs = set(r2_unassociated_contigs)
+
         for c in r2_unassociated_contigs:
             pos1 = self._append_to_pseudo_genome_(bigNs, Singltons_R2_nome_out, singletons_pos_R2, span=80)
             pos2 = self._append_to_pseudo_genome_(contig1, Singltons_R2_nome_out, pos1, span=80)
@@ -540,9 +538,10 @@ class MergeAssemblies(Logging):
 
         R1_sam = pysam.Samfile(bam1,'rb')
         path = os.path.split(bam1)[0]
+        path = os.path.join(os.path.split(path)[0], 'fastas')
         R1_starts = os.path.join(path, "{}.R1.contig_start_pos.txt".format(run_ID))
         low_depth_R1_starts = os.path.join(path, "{}.low_DP.R1.contig_start_pos.txt".format(run_ID))
-        low_depth_R1_starts = open(low_depth_R1_starts,'w')
+        low_depth_R1_starts = open(low_depth_R1_starts, 'w')
 
         # ITERATE OVER START POSITIONS
         with open(R1_starts,'rU') as r1_starts:

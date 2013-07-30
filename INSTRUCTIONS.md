@@ -108,7 +108,7 @@ Currently we're recommending that users align their reads with bowtie2 since bow
 
 To generate SAM alignments with bowtie2  you'll first need to index the RADnome file:
 
-    bowtie2-build RADnome.fa RADnome.idx
+    bowtie2-build test_run.RADnome.fa test_run.RADnome
 
 It's very important that the read group (RG) information is specified when you align your reads as as GATK won't run without it. To specify the RG flags properly, you'll need to know the plate ID and line for each sample. This info can usually be obtained by looking at the fastq sequence read IDs.
 
@@ -125,10 +125,10 @@ A bowtie2 command that includes the minimum RG info for GATK might look like the
     --rg LB:library_id \
     --rg PL:ILLUMINA \
     --rg-id plate.lane \
-    -x RADnome.idx \
-    -1 fastq1.1.fq \
-    -2 fastq1.2.fq \
-    | samtools -Sb - > sample_id.bam
+    -x test_run.RADnome \
+    -1 fq1.10k.fq \
+    -2 fq2.10k.fq \
+    | samtools view -Sb - > test_run.RADnome.bam
 
 You'd replace "plate", "lane", "sample_id", and "library_id" with the appropriate values. Typically sample_id and library_id are identical unless you created multiple libraries from the same sample.
 

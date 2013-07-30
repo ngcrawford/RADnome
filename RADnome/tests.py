@@ -22,8 +22,9 @@ class TestCmds(unittest.TestCase):
         """Define shared variables, classes, and decompress tar.gz"""
 
         # Setup Variables
-        self.run_ID = 'test'
+        self.run_ID = 'test_run'
         self.min_mapq = 3
+        self.min_depth = 1
 
         # Setup Classes
         self.P = pipeline.RunPipeline()
@@ -96,14 +97,15 @@ class TestCmds(unittest.TestCase):
     def test_ascContigs(self):
         """Test associating contigs method."""
 
-        sam1 = os.path.join(self.test_data, "data/alignments/fq1.10k.fq.sorted.sam")
+        bam1 = os.path.join(self.test_data, "data/alignments/fq1.10k.fq.sorted.bam")
         sam2 = os.path.join(self.test_data, "data/alignments/fq2.10k.fq.sorted.sam")
         contig_positions = os.path.join(self.test_data, "data/fastas/test_run.R1_to_R2_contig_associations.pkl")
 
         run_ID = self.run_ID
         min_mapq = self.min_mapq
+        min_depth = self.min_depth
 
-        z = self.M.associate_contigs(sam1, sam2, min_mapq, run_ID)
+        z = self.M.associate_contigs(bam1, sam2, min_mapq, min_depth, run_ID)
         self.assertTrue(z)
 
     def test_contigs_2_RADnome(self):
