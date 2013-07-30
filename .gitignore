@@ -15,5 +15,5 @@ tests/data/*.txt
 tests/data/*RADnome*
 tests/data/revs*
 data/*
-tests/data/data*
+tests/data/data/*
 tests/data/tmp/*
