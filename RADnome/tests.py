@@ -103,7 +103,7 @@ class TestCmds(unittest.TestCase):
         run_ID = self.run_ID
         min_mapq = self.min_mapq
 
-        z = self.M.associate_contigs(sam1, sam2, contig_positions, min_mapq, run_ID)
+        z = self.M.associate_contigs(sam1, sam2, min_mapq, run_ID)
         self.assertTrue(z)
 
     def test_contigs_2_RADnome(self):
@@ -125,6 +125,7 @@ class TestCmds(unittest.TestCase):
         N_padding = 500
         insert_size = 50
         proportion = 0.8
+        overlap = 10
 
         out_path = os.path.join(self.test_data, "tmp")
 
@@ -137,6 +138,7 @@ class TestCmds(unittest.TestCase):
                                      N_padding,
                                      insert_size,
                                      proportion,
+                                     overlap,
                                      out_path)
         self.assertTrue(z)
 

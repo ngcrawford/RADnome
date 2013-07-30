@@ -39,6 +39,7 @@ class RunPipeline(object):
                           stderr=PIPE).communicate()
         return 1
 
+
     def run_div_cmd(self, fq_id, out_path=None):
 
         if out_path != None:
@@ -167,6 +168,15 @@ class RunPipeline(object):
                           stdout=PIPE,
                           stderr=PIPE).communicate()
 
+        cli = "samtools index {0}.sorted.bam".format(fout)
+        cli_list = shlex.split(cli)
+        line, err = Popen(cli_list,
+                          stdin=PIPE,
+                          stdout=PIPE,
+                          stderr=PIPE).communicate()
+
+        print line, err
+
         cli = "samtools view -h {0}.sorted.bam".format(fout)
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
@@ -175,7 +185,7 @@ class RunPipeline(object):
                           stderr=PIPE).communicate()
         return 1
 
-    def ascContigs(self, fq1, fq2, run_ID, min_mapq, out_path=None):
+    def ascContigs(self, fq1, fq2, run_ID, min_mapq, min_depth, out_path=None):
 
         if out_path != None:
             fout1 = os.path.split(fq1)[-1]
@@ -189,16 +199,17 @@ class RunPipeline(object):
             fout1 = os.path.split(fq1)[-1]
             fout2 = os.path.split(fq2)[-1]
 
-        sam1 = "{}.sorted.sam".format(fout1)
+        bam1 = "{}.sorted.bam".format(fout1)
         sam2 = "{}.sorted.sam".format(fout2)
 
         contig_positions = "{}.R1.contig_start_pos.txt".format(run_ID)
 
         M = MergeAssemblies()
-        log = M.associate_contigs(sam1, sam2, contig_positions, min_mapq, run_ID)
+        log = M.associate_contigs(bam1, sam2, min_mapq, min_depth, run_ID)
         return 1
 
-    def make_RADnome(self, fq1, fq2, run_ID, out_path=None):
+    def make_RADnome(self, fq1, fq2, run_ID, N_padding, insert_size,
+                     proportion, overlap, out_path=None):
 
         def seq_len(fq):
             with open(fq,'rU') as fin:
@@ -225,9 +236,10 @@ class RunPipeline(object):
 
         contig_2_contig_dict = "{}.R1_to_R2_contig_associations.pkl".format(run_ID)
         run_name = run_ID
-        N_padding = 500
-        insert_size = 50
-        proportion = 0.8
+        # N_padding = 500
+        # insert_size = 50
+        # proportion = 0.8
+        # overlap = 10
 
         self.create_faidx(rad1)
         self.create_faidx(rad2)
@@ -235,15 +247,18 @@ class RunPipeline(object):
         G = GenerateRADnome()
         G.contigs_2_RADnome(rad1, rad2, r1_contig_len,
                   r2_contig_len, contig_2_contig_dict,
-                  run_name, N_padding, insert_size, proportion)
+                  run_name, N_padding, insert_size,
+                  proportion, overlap)
         return 1
 
     def merge_fastas(self, run_ID):
         Paired_nome_out = run_ID + ".paired_contigs.fa"
-        Singtons_nome_out = run_ID + ".singleton_R1_R2_contigs.fa"
+        Singtons_R1_nome_out = run_ID + ".singleton_R1_contigs.fa"
+        Singtons_R2_nome_out = run_ID + ".singleton_R2_contigs.fa"
         Contig_nome_out = run_ID + ".assembled_contigs.fa"
 
-        cli = "cat {0} {1} {2}".format(Paired_nome_out, Contig_nome_out, Singtons_nome_out)
+        cli = "cat {0} {1} {2} {3}".format(Paired_nome_out, Contig_nome_out,
+                                       Singtons_R1_nome_out, Singtons_R2_nome_out)
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
                           stdin=PIPE,
@@ -263,6 +278,7 @@ class RunPipeline(object):
 
         a = [shutil.move(f, 'alignments/') for f in glob.glob('*.sam')]
         a = [shutil.move(f, 'alignments/') for f in glob.glob('*.bam')]
+        a = [shutil.move(f, 'alignments/') for f in glob.glob('*.bai')]
         a = [shutil.move(f, 'alignments/') for f in glob.glob('*.fidx')]
 
 
@@ -271,7 +287,6 @@ class RunPipeline(object):
 
         fastas = glob.glob('*.fa')
         fastas.remove("{}.RADnome.fa".format(run_ID))
-        print fastas
 
         a = [shutil.move(f, 'fastas/') for f in fastas]
         a = [shutil.move(f, 'fastas/') for f in glob.glob('*.fai')]
@@ -289,7 +304,8 @@ class RunPipeline(object):
         a = [shutil.move(f, 'logs/') for f in glob.glob('*.log')]
         return 1
 
-    def pipeline(self, fq1, fq2, run_ID, cores=3):
+    def pipeline(self, fq1, fq2, run_ID, N_padding, insert_size,
+                     proportion, overlap, cores):
 
         # -----------
         # Run Rainbow
@@ -332,10 +348,11 @@ class RunPipeline(object):
         self.sam_to_sorted_sam(fq2)
 
         sys.stdout.write("Step 7: Associating contigs ...\n")
-        self.ascContigs(fq1, fq2, run_ID, min_mapq=3)
+        self.ascContigs(fq1, fq2, run_ID, min_depth=1, min_mapq=3)
 
         sys.stdout.write("Step 8: Create RADnome ...\n")
-        self.make_RADnome(fq1, fq2, run_ID)
+        self.make_RADnome(fq1, fq2, run_ID, N_padding,
+                          insert_size, proportion, overlap,)
         self.merge_fastas(run_ID)
 
         sys.stdout.write("Step 9: Organize directory ...\n")

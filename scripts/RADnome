@@ -46,7 +46,15 @@ def assoicate_contigs(args):
 
 def run_pipeline(args):
     P = RunPipeline()
-    P.pipeline(args.fqs[0], args.fqs[1], args.run_name, args.cores)
+    P.pipeline(
+        args.fqs[0],
+        args.fqs[1],
+        args.run_name,
+        args.N_padding,
+        args.insert_padding,
+        args.min_proportion_in_mode,
+        args.min_overlap,
+        args.cores)
 
 
 def get_args():
@@ -194,13 +202,53 @@ def get_args():
         '-r', '--run-name',
         type=str,
         default='RADnome',
-        help="Name of run. Becomes fasta name.")
+        help="Name of run appended as prefix to output files.")
 
     parser_pipeline.add_argument(
         '-c', '--cores',
         type=int,
         default=1,
         help="Number of processor cores for bowtie2 to use.")
+
+    parser_pipeline.add_argument(
+        '-n', '--N-padding',
+        type=int,
+        default=500,
+        help="Number of N's to insert between contigs.")
+
+    parser_pipeline.add_argument(
+        '-i', '--insert-padding',
+        type=int,
+        default=50,
+        help="Number of N's to insert between associated contigs.")
+
+    parser_pipeline.add_argument(
+        '-p', '--min-proportion-in-mode',
+        type=int,
+        default=0.8,
+        help="Minimun proportion of R2 reads that must align to \
+              the contig with the most depth.")
+
+    parser_pipeline.add_argument(
+        '-o', '--min-overlap',
+        type=int,
+        default=10,
+        help="Minimun number of bases that must overlap in \
+              order to join contigs")
+
+    parser_pipeline.add_argument(
+        '-d', '--min-depth',
+        type=int,
+        default=10,
+        help="Minimun number of reads present in each contig \
+              necessary to join contigs.")
+
+    parser_pipeline.add_argument(
+        '-m', '--min-mapq',
+        type=int,
+        default=3,
+        help="Minimun mapping quality (MAPQ) required for a read to \
+             be considered when joining contigs.")
 
     # LOGIC TO SELECT AND RUN APPROPRIATE SUB-COMMAND.
     parser_READnome.set_defaults(func=generate_READnome)

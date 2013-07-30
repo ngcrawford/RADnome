@@ -14,8 +14,9 @@ Add later.
 """
 
 
-import copy
+
 import os
+import sys
 import gzip
 import pysam
 import datetime
@@ -98,7 +99,6 @@ class Logging(object):
 
           Query file: {0[query_sam]}
           Searched file: {0[searched_sam]}
-          Contig Positions file: {0[contig_positions]}
           Output Pickle file: {0[pickle]}
 
           Minimum MAPQ value: {0[min_mapq]}
@@ -141,6 +141,13 @@ class Logging(object):
 
           Padding between RADfrags: {0[N_padding]} bp
           Padding between R1/R2 contigs: {0[insert_size]} bp
+
+        Counts:
+
+            Total associated contigs: {0[associated_contigs]}
+            Total assembled contigs: {0[assembled_contigs]}
+            Total R1 singleton contigs: {0[R1_singletons]}
+            Total R2 singleton contigs: {0[R2_singletons]}
 
         Basic Stats:
 
@@ -298,10 +305,17 @@ class GenerateRADnome(Logging):
         return cons
 
 
+    def test(self):
+        unique_items = set([item for sublist in c2c.values() for item in sublist])
+        min_i = min(z)
+        max_i = max(z)
+        full_set = set(xrange(min_i, max_i + 1, 600))
+        print sorted(list(full_set - unique_items))
+
     def contigs_2_RADnome(self, rad1, rad2, r1_contig_len,
                           r2_contig_len, contig_2_contig_dict,
                           run_name, N_padding, insert_size,
-                          proportion, out_path=None):
+                          proportion, overlap, out_path=None):
 
         C = ContigAssembler()
         run_results = {
@@ -320,6 +334,10 @@ class GenerateRADnome(Logging):
             "potential_rad_frags": 0,
             "unique_associations": 0,
             "mode_diff": 0,
+            "associated_contigs": 0,
+            'assembled_contigs': 0,
+            'R1_singletons': 0,
+            'R2_singletons': 0,
             }
 
         r1_name = self.__get_fasta_header__(rad1)
@@ -330,7 +348,8 @@ class GenerateRADnome(Logging):
 
         # MAKE OUTPUT FILENAMES
         RADnome_out = run_name + ".paired_contigs.fa"
-        Singtons_nome_out = run_name + ".singleton_R1_R2_contigs.fa"
+        Singltons_R1_nome_out = run_name + ".singleton_R1_contigs.fa"
+        Singltons_R2_nome_out = run_name + ".singleton_R2_contigs.fa"
         Contig_nome_out = run_name + ".assembled_contigs.fa"
 
         run_results['RADnome_out'] = RADnome_out
@@ -340,8 +359,11 @@ class GenerateRADnome(Logging):
             RADnome_out = os.path.join(out_path, RADnome_out)
             RADnome_out = open(RADnome_out, 'w')
 
-            Singtons_nome_out = os.path.join(out_path, Singtons_nome_out)
-            Singtons_nome_out = open(Singtons_nome_out, 'w')
+            Singltons_R1_nome_out = os.path.join(out_path, Singltons_R1_nome_out)
+            Singltons_R1_nome_out = open(Singltons_R1_nome_out, 'w')
+
+            Singltons_R2_nome_out = os.path.join(out_path, Singltons_R2_nome_out)
+            Singltons_R2_nome_out = open(Singltons_R2_nome_out, 'w')
 
             Contig_nome_out = os.path.join(out_path, Contig_nome_out)
             Contig_nome_out = open(Contig_nome_out, 'w')
@@ -349,7 +371,8 @@ class GenerateRADnome(Logging):
         else:
 
             RADnome_out = open(RADnome_out, 'w')
-            Singtons_nome_out = open(Singtons_nome_out, 'w')
+            Singltons_R1_nome_out = open(Singltons_R1_nome_out, 'w')
+            Singltons_R2_nome_out = open(Singltons_R2_nome_out, 'w')
             Contig_nome_out = open(Contig_nome_out, 'w')
 
         c2c = pickle.load(open(contig_2_contig_dict, 'rb'))
@@ -357,9 +380,10 @@ class GenerateRADnome(Logging):
         count = 0
         rad_frag_count = 0
         RADnome_pos = 0
-        singletons_pos = 0
+        singletons_pos_R1 = 0
         contigs_pos = 0
         seq_start = 1
+        r2_unassociated_contigs = []
 
         for key, value in c2c.iteritems():
             run_results["potential_rad_frags"] += 1
@@ -374,9 +398,10 @@ class GenerateRADnome(Logging):
 
             # WRITE FASTA HEADER
             if count == 0:
-                RADnome_out.write('>{}_NonOverlapping_PE_contigs\n'.format(run_name))
-                Contig_nome_out.write('>{}_Assembled_PE_contigs\n'.format(run_name))
-                Singtons_nome_out.write('>{}_Singleton_contigs\n'.format(run_name))
+                RADnome_out.write('>{}_NonOverlapping\n'.format(run_name))
+                Contig_nome_out.write('>{}_Assembled\n'.format(run_name))
+                Singltons_R1_nome_out.write('>{}_R1_Singletons\n'.format(run_name))
+                Singltons_R2_nome_out.write('>{}_R2_Singletons\n'.format(run_name))
 
             # ASSOCIATE CONTIG PAIRS
             if self.filter_contigs(counts, proportion) >= proportion:
@@ -390,13 +415,20 @@ class GenerateRADnome(Logging):
                 contig1 = r1.fetch(r1_name, key, key+r1_contig_len)
                 contig2 = r2.fetch(r2_name, mode[0], mode[0]+r2_contig_len)
 
+                # Track non-mode R2 contigs
+                try:
+                    non_mode_contigs = counts.keys().remove(mode)
+                    r2_unassociated_contigs.extend(non_mode_contigs)
+                except ValueError:
+                    pass
+
                 # RAINBOW orientation is reversed for the R1 reads
                 # so it is necessary to flip contig1's oriention
                 # ToDo: Make this generalized based on the SAM alignments
                 contig1 = contig1[::-1]
                 contig1 = self.__make_consensus__(contig1)
 
-                assembly_results = C.assemble_contigs(contig1[::-1], contig2[::-1])
+                assembly_results = C.assemble_contigs(contig1[::-1], contig2[::-1], overlap)
 
                 if assembly_results is not None:
 
@@ -406,6 +438,7 @@ class GenerateRADnome(Logging):
                     pos1 = self._append_to_pseudo_genome_(bigNs, Contig_nome_out, contigs_pos, span=80)
                     pos2 = self._append_to_pseudo_genome_(assembled_contig, Contig_nome_out, pos1, span=80)
                     contigs_pos = pos2
+                    run_results["assembled_contigs"] += 1
 
                 else:
                     # ADD FRAGMENTS TO RADNOME
@@ -416,27 +449,41 @@ class GenerateRADnome(Logging):
 
                     RADnome_pos = pos4
                     seq_start += pos4
+                    run_results["associated_contigs"] += 1
 
             # PROCESS R1s
             else:
+
+                r2_unassociated_contigs.extend(counts.keys()) # update R2 ids
+
                 bigNs = "N" * N_padding
                 contig1 = r1.fetch(r1_name, key, key+r1_contig_len)
 
-                pos1 = self._append_to_pseudo_genome_(bigNs, Singtons_nome_out, singletons_pos, span=80)
-                pos2 = self._append_to_pseudo_genome_(contig1, Singtons_nome_out, pos1, span=80)
+                pos1 = self._append_to_pseudo_genome_(bigNs, Singltons_R1_nome_out, singletons_pos_R1, span=80)
+                pos2 = self._append_to_pseudo_genome_(contig1, Singltons_R1_nome_out, pos1, span=80)
 
-                contig2 = r2.fetch(r2_name, mode[0], mode[0]+r2_contig_len)
-
-
-                singletons_pos = pos2
-                #seq_start += pos2
+                singletons_pos_R1 = pos2
+                run_results["R1_singletons"] += 1
 
             count += 1
-        Singtons_nome_out.write("\n")
+
+        # PROCESS R2s
+        singletons_pos_R2 = 0
+        r2_unassociated_contigs = set(r2_unassociated_contigs)
+        for c in r2_unassociated_contigs:
+            pos1 = self._append_to_pseudo_genome_(bigNs, Singltons_R2_nome_out, singletons_pos_R2, span=80)
+            pos2 = self._append_to_pseudo_genome_(contig1, Singltons_R2_nome_out, pos1, span=80)
+            singletons_pos_R2 = pos2
+
+        run_results["R2_singletons"] = len(r2_unassociated_contigs)
+
+        Singltons_R1_nome_out.write("\n")
+        Singltons_R2_nome_out.write("\n")
         Contig_nome_out.write("\n")
         RADnome_out.write("\n")
 
-        Singtons_nome_out.close()
+        Singltons_R1_nome_out.close()
+        Singltons_R2_nome_out.close()
         Contig_nome_out.close()
         RADnome_out.close()
 
@@ -455,7 +502,6 @@ class MergeAssemblies(Logging):
 
     @staticmethod
     def get_hit_pos(s):
-
         try:
             return int(s.pos)
 
@@ -470,16 +516,16 @@ class MergeAssemblies(Logging):
             return 'unpaired'
 
 
-    def associate_contigs(self, sam1, sam2, contig_positions, min_mapq, run_ID):
+    def associate_contigs(self, bam1, sam2, min_mapq, min_depth, run_ID):
 
         run_results = {
             "total_queries": 0,
             "passed_filter": 0,
             "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
             "min_mapq": min_mapq,
-            "query_sam": sam1,
+            "query_sam": bam1,
             "searched_sam": sam2,
-            "contig_positions": contig_positions,
+            # "contig_positions": contig_positions,
             "pickle": None,
             }
 
@@ -492,43 +538,54 @@ class MergeAssemblies(Logging):
         fi = FileIndex(sam2, SamLine, allow_multiple=True)
         ma = MergeAssemblies()
 
-        #contig_starts = [int(l.strip()) for l in open(contig_positions, 'rU')]
+        R1_sam = pysam.Samfile(bam1,'rb')
+        path = os.path.split(bam1)[0]
+        R1_starts = os.path.join(path, "{}.R1.contig_start_pos.txt".format(run_ID))
+        low_depth_R1_starts = os.path.join(path, "{}.low_DP.R1.contig_start_pos.txt".format(run_ID))
+        low_depth_R1_starts = open(low_depth_R1_starts,'w')
 
-        with open(sam1, 'rU') as qs:
+        # ITERATE OVER START POSITIONS
+        with open(R1_starts,'rU') as r1_starts:
 
-            for count, q in enumerate(qs):
+            for count, start in enumerate(r1_starts):
+                query_pos = int(start.strip())
 
-                if q.startswith("@"):                      # skip header lines
+                if query_pos is 0:
                     continue
 
-                # SPLIT LINE AND IDENTIFY QUERY POSITION.
-                q = q.strip().split("\t")
-                query_pos = int(q[3])
-                query_pos = ma.round_bp_pos(query_pos)     # this could be more sophisticated.
+                reads = R1_sam.fetch("test_run.R1", query_pos-5, query_pos+5)
+                reads = [r for r in reads]                  # unpack interator
 
-                q_id = q[0][:-1] + "2"                     # create query id (e.g., ends with "2")
-                q_mapq = int(q[4])                         # and, mapping quality.
+                depth = len(reads)
 
+                if depth <= min_depth:
+                    low_depth_R1_starts.write("{}".format(start))
+                    continue
 
-                # SEARCH FOR QUERY AND PARSE RESULTS
-                for s in fi[q_id]:
+                for q in reads:
+                    q_id = q.qname[:-1] + "2"               # create query id (e.g., ends with "2")
+                    q_mapq = q.mapq                         # and, mapping quality.
 
-                    if (q_mapq > min_mapq) and (s.mapq > min_mapq):
+                    # SEARCH FOR QUERY AND PARSE RESULTS
+                    for s in fi[q_id]:
 
-                        run_results["passed_filter"] += 1
+                        if (q_mapq > min_mapq) and (s.mapq > min_mapq):
 
-                        hit_pos = ma.get_hit_pos(s)
-                        hit_pos = ma.round_bp_pos(hit_pos)
-                        contig_2_contig_dict[query_pos].append(hit_pos)
+                            run_results["passed_filter"] += 1
 
+                            hit_pos = ma.get_hit_pos(s)
+                            hit_pos = ma.round_bp_pos(hit_pos)
+                            contig_2_contig_dict[query_pos].append(hit_pos)
 
         #CREATE PICKLE OUTPUT FILE
         today = datetime.date.today()
 
-        path = os.path.split(sam1)[0]
+        path = os.path.split(bam1)[0]
         pkl_output_file_name = os.path.join(path, '{}.R1_to_R2_contig_associations.pkl'.format(run_ID))
         pkl_out = open(pkl_output_file_name, 'wb')
         pickle.dump(contig_2_contig_dict, pkl_out)
+
+        low_depth_R1_starts.close()
 
         # UPDATE RUN RESULTS AND GENERATE LOGFILE
         run_results["total_queries"] = count
@@ -536,7 +593,7 @@ class MergeAssemblies(Logging):
         self.__associate_contigs_log__(run_results, path)        # format logging results
         return 1
 
-    def __generate_test_data__(self, sam1, sam2, contig_positions, min_mapq):
+    def __generate_test_data__(self, bam1, sam2, contig_positions, min_mapq):
 
         run_results = {
             "total_queries": 0,
@@ -647,9 +704,9 @@ class ContigAssembler(object):
         if mpos is not None:
 
             assembled_contigs = z + y[mpos+1:]
-            proportion_overlapped = float(mpos)/len(assembled_contigs)
+            overlapped = mpos
 
-            if proportion_overlapped >= overlap:
+            if overlapped >= overlap:
                 return assembled_contigs
             else:
                 return None
