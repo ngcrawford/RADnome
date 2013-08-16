@@ -309,6 +309,41 @@ class GenerateRADnome(Logging):
         full_set = set(xrange(min_i, max_i + 1, 600))
         print sorted(list(full_set - unique_items))
 
+    def write_contig_start_stop_info(self, outfile, run_name, current_position, start_stop_info, pseudo_genome_type):
+
+        if pseudo_genome_type == "RADnome":
+            bigNs, contig1, smallNs, contig2 = start_stop_info
+            current_position += len(bigNs) + len(contig1) + len(smallNs) + len(contig2)
+            start = (current_position - (len(contig1) + len(smallNs) + len(contig2))) - 1
+            stop = current_position
+            line = '{0}_NonOverlapping {1} {2}\n'.format(run_name, start, stop)
+            outfile.write(line)
+
+        elif pseudo_genome_type == 'Contignome':
+            bigNs, assembled_contig = start_stop_info
+            current_position += len(bigNs) + len(assembled_contig)
+            start = (current_position - len(assembled_contig)) - 1
+            stop = current_position
+            line = '{0}_Assembled {1} {2}\n'.format(run_name, start, stop)
+            outfile.write(line)
+
+        elif pseudo_genome_type == 'R1nome':
+            bigNs, contig1 = start_stop_info
+            current_position += len(bigNs) + len(contig1)
+            start = (current_position - len(contig1)) + 1
+            stop = current_position
+            line = '{0}_R1_Singletons {1} {2}\n'.format(run_name, start, stop)
+
+        elif pseudo_genome_type == 'R2nome':
+            bigNs, contig1 = start_stop_info
+            current_position += len(bigNs) + len(contig1)
+            start = (current_position - len(contig1)) + 1
+            stop = current_position
+            line = '{0}_R2_Singletons {1} {2}\n'.format(run_name, start, stop)
+            outfile.write(line)
+
+        return current_position
+
     def contigs_2_RADnome(self, rad1, rad2, r1_contig_len,
                           r2_contig_len, contig_2_contig_dict,
                           run_name, N_padding, insert_size,
@@ -349,6 +384,9 @@ class GenerateRADnome(Logging):
         Singltons_R2_nome_out = run_name + ".singleton_R2_contigs.fa"
         Contig_nome_out = run_name + ".assembled_contigs.fa"
 
+        contig_positions_out = run_name + '.RADnome.contig_positions.txt'
+
+
         run_results['RADnome_out'] = RADnome_out
 
         if out_path is not None:
@@ -365,12 +403,17 @@ class GenerateRADnome(Logging):
             Contig_nome_out = os.path.join(out_path, Contig_nome_out)
             Contig_nome_out = open(Contig_nome_out, 'w')
 
+            contig_positions_out = os.path.join(out_path, contig_positions_out)
+            contig_positions_out = open(contig_positions_out, 'w')
+
         else:
 
             RADnome_out = open(RADnome_out, 'w')
             Singltons_R1_nome_out = open(Singltons_R1_nome_out, 'w')
             Singltons_R2_nome_out = open(Singltons_R2_nome_out, 'w')
             Contig_nome_out = open(Contig_nome_out, 'w')
+            contig_positions_out = open(contig_positions_out, 'w')
+
 
         c2c = pickle.load(open(contig_2_contig_dict, 'rb'))
 
@@ -381,6 +424,11 @@ class GenerateRADnome(Logging):
         contigs_pos = 0
         seq_start = 1
         r2_unassociated_contigs = []
+
+        contignome_current_position = 0
+        radnome_current_position = 0
+        r1_current_position = 0
+        r2_current_position = 0
 
         for key, value in c2c.iteritems():
             run_results["potential_rad_frags"] += 1
@@ -434,7 +482,11 @@ class GenerateRADnome(Logging):
                     # ADD FRAGMENTS TO CONTIG NOME
                     pos1 = self._append_to_pseudo_genome_(bigNs, Contig_nome_out, contigs_pos, span=80)
                     pos2 = self._append_to_pseudo_genome_(assembled_contig, Contig_nome_out, pos1, span=80)
+                    # print 'ContigNome', pos1, pos2, contigs_pos
                     contigs_pos = pos2
+
+                    contignome_current_position = self.write_contig_start_stop_info(contig_positions_out, run_name, contignome_current_position, \
+                                                                                (bigNs, assembled_contig), 'Contignome')
                     run_results["assembled_contigs"] += 1
 
                 else:
@@ -445,6 +497,10 @@ class GenerateRADnome(Logging):
                     pos4 = self._append_to_pseudo_genome_(contig2, RADnome_out, pos3, span=80)
 
                     RADnome_pos = pos4
+
+                    radnome_current_position = self.write_contig_start_stop_info(contig_positions_out, run_name, radnome_current_position, 
+                                                                                (bigNs, contig1, smallNs, contig2), 'RADnome')
+
                     seq_start += pos4
                     run_results["associated_contigs"] += 1
 
@@ -459,6 +515,9 @@ class GenerateRADnome(Logging):
                 pos1 = self._append_to_pseudo_genome_(bigNs, Singltons_R1_nome_out, singletons_pos_R1, span=80)
                 pos2 = self._append_to_pseudo_genome_(contig1, Singltons_R1_nome_out, pos1, span=80)
 
+
+                r1_current_position = self.write_contig_start_stop_info(contig_positions_out, run_name, r1_current_position, (bigNs, contig1), 'R1nome')
+
                 singletons_pos_R1 = pos2
                 run_results["R1_singletons"] += 1
 
@@ -471,6 +530,9 @@ class GenerateRADnome(Logging):
         for c in r2_unassociated_contigs:
             pos1 = self._append_to_pseudo_genome_(bigNs, Singltons_R2_nome_out, singletons_pos_R2, span=80)
             pos2 = self._append_to_pseudo_genome_(contig1, Singltons_R2_nome_out, pos1, span=80)
+
+            r2_current_position = self.write_contig_start_stop_info(contig_positions_out, run_name, r2_current_position, (bigNs, contig1), 'R2nome')
+
             singletons_pos_R2 = pos2
 
         run_results["R2_singletons"] = len(r2_unassociated_contigs)
@@ -538,7 +600,7 @@ class MergeAssemblies(Logging):
 
         R1_sam = pysam.Samfile(bam1,'rb')
         path = os.path.split(bam1)[0]
-        path = os.path.join(os.path.split(path)[0], 'fastas')
+        #path = os.path.join(os.path.split(path)[0], 'fastas')
         R1_starts = os.path.join(path, "{}.R1.contig_start_pos.txt".format(run_ID))
         low_depth_R1_starts = os.path.join(path, "{}.low_DP.R1.contig_start_pos.txt".format(run_ID))
         low_depth_R1_starts = open(low_depth_R1_starts, 'w')

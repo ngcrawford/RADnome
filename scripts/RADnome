@@ -11,8 +11,13 @@ Copyright (c) 2012 Nicholas G. Crawford All rights reserved.
 
 Description...
 
-Add later.
+Test Command:
 
+cd tests/data/
+RADnome runPipeline \
+--fqs fq1.10k.fq fq2.10k.fq \
+--run-name test_run \
+--cores 3
 """
 
 import sys; import os

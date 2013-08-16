@@ -175,8 +175,6 @@ class RunPipeline(object):
                           stdout=PIPE,
                           stderr=PIPE).communicate()
 
-        print line, err
-
         cli = "samtools view -h {0}.sorted.bam".format(fout)
         cli_list = shlex.split(cli)
         line, err = Popen(cli_list,
@@ -311,7 +309,7 @@ class RunPipeline(object):
         # Run Rainbow
         # -----------
 
-        sys.stdout.write("""Generating {0} on {1}\n\n""".format(run_ID, datetime.date.today()))
+        sys.stdout.write("""Generating RADnome: '{0}'' on {1}\n\n""".format(run_ID, datetime.date.today()))
 
         sys.stdout.write("Step 1: Running Rainbow Cluster ...\n")
         self.run_cluster_cmd(fq1)
