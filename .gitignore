@@ -17,3 +17,4 @@ tests/data/revs*
 data/*
 tests/data/data/*
 tests/data/tmp/*
+working_data/
