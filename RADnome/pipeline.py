@@ -309,7 +309,7 @@ class RunPipeline(object):
         # Run Rainbow
         # -----------
 
-        sys.stdout.write("""Generating RADnome: '{0}'' on {1}\n\n""".format(run_ID, datetime.date.today()))
+        sys.stdout.write("""Generating RADnome: '{0}' on {1}\n\n""".format(run_ID, datetime.date.today()))
 
         sys.stdout.write("Step 1: Running Rainbow Cluster ...\n")
         self.run_cluster_cmd(fq1)
