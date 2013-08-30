@@ -19,6 +19,7 @@ import pysam
 import datetime
 import textwrap
 import collections
+# import numpy as np
 import cPickle as pickle
 from fileindex import FileIndex
 from collections import defaultdict
@@ -346,6 +347,11 @@ class GenerateRADnome(Logging):
 
         return current_position
 
+    def __find_nearest__(self, array, value):
+        n = [abs(i-value) for i in array]
+        idx = n.index(min(n))
+        return array[idx]
+
     def contigs_2_RADnome(self, rad1, rad2, r1_contig_len,
                           r2_contig_len, contig_2_contig_dict,
                           run_name, N_padding, insert_size,
@@ -415,7 +421,6 @@ class GenerateRADnome(Logging):
             Contig_nome_out = open(Contig_nome_out, 'w')
             contig_positions_out = open(contig_positions_out, 'w')
 
-        print 'loading pickle'
         c2c = pickle.load(open(contig_2_contig_dict, 'rb'))
 
         count = 0
@@ -430,6 +435,9 @@ class GenerateRADnome(Logging):
         radnome_current_position = 0
         r1_current_position = 0
         r2_current_position = 0
+
+        R2_starts = "{}.R2.contig_start_pos.txt".format(run_name)
+        R2_starts = tuple(int(i.strip()) for i in open(R2_starts,'rU'))
 
         for key, value in c2c.iteritems():
             run_results["potential_rad_frags"] += 1
@@ -459,17 +467,15 @@ class GenerateRADnome(Logging):
                 bigNs = "N" * N_padding
                 smallNs = "N" * insert_size
                 contig1 = r1.fetch(r1_name, key, key+r1_contig_len)
-                contig2 = r2.fetch(r2_name, mode[0], mode[0]+r2_contig_len)
 
-                print 'R1', r1_name, key, key+r1_contig_len, (key+r1_contig_len - key )
-                print 'R2', r2_name, mode[0], mode[0]+r2_contig_len, (mode[0]+r2_contig_len - mode[0])
+                r2_start = self.__find_nearest__(R2_starts, mode[0])
+                contig2 = r2.fetch(r2_name, r2_start, r2_start+r2_contig_len)
 
-                if count > 10: break
-
-                # Track non-mode R2 contigs
                 try:
                     non_mode_contigs = counts.keys().remove(mode)
+                    non_mode_contigs = [self.__find_nearest__(R2_starts, s) for s in non_mode_contigs]
                     r2_unassociated_contigs.extend(non_mode_contigs)
+
                 except ValueError:
                     pass
 
@@ -586,12 +592,11 @@ class MergeAssemblies(Logging):
             return 'unpaired'
 
     @staticmethod
-    def round_bp_pos(value, nearest=10):
+    def round_bp_pos(value, nearest=5):
         if value != "unpaired":
             return int(round(float(value) / nearest) * nearest)
         else:
             return 'unpaired'
-
 
     def associate_contigs(self, bam1, sam2, min_mapq, min_depth, run_ID):
 
@@ -618,8 +623,9 @@ class MergeAssemblies(Logging):
 
         R1_sam = pysam.Samfile(bam1,'rb')
         path = os.path.split(bam1)[0]
-        #path = os.path.join(os.path.split(path)[0], 'fastas')
+
         R1_starts = os.path.join(path, "{}.R1.contig_start_pos.txt".format(run_ID))
+
         low_depth_R1_starts = os.path.join(path, "{}.R1.contig_start_pos.no_pass.txt".format(run_ID))
         low_depth_R1_starts = open(low_depth_R1_starts, 'w')
 
@@ -633,7 +639,7 @@ class MergeAssemblies(Logging):
             if query_pos is 0:
                 continue
 
-            reads = R1_sam.fetch("{}.R1".format(run_ID), query_pos-10, query_pos+10)
+            reads = R1_sam.fetch("{}.R1".format(run_ID), query_pos-5, query_pos+5)
             reads = [r for r in reads]                  # unpack interator
 
             depth = len(reads)
