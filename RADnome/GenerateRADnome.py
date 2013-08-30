@@ -19,6 +19,7 @@ import pysam
 import datetime
 import textwrap
 import collections
+# import numpy as np
 import cPickle as pickle
 from fileindex import FileIndex
 from collections import defaultdict
@@ -103,7 +104,8 @@ class Logging(object):
         Results:
 
           Total reads processed: {0[total_queries]}
-          Paired reads passing filter: {0[passed_filter]} ( = {0[prop_asc]:%} )
+          Paired reads passing filter: {0[passed_filter]}
+          Unpaired R1s: {0[failed_filter]}
 
         """.format(results_dict)
 
@@ -314,7 +316,7 @@ class GenerateRADnome(Logging):
         if pseudo_genome_type == "RADnome":
             bigNs, contig1, smallNs, contig2 = start_stop_info
             current_position += len(bigNs) + len(contig1) + len(smallNs) + len(contig2)
-            start = (current_position - (len(contig1) + len(smallNs) + len(contig2))) - 1
+            start = (current_position - (len(contig1) + len(smallNs) + len(contig2))) + 1
             stop = current_position
             line = '{0}_NonOverlapping {1} {2}\n'.format(run_name, start, stop)
             outfile.write(line)
@@ -322,7 +324,7 @@ class GenerateRADnome(Logging):
         elif pseudo_genome_type == 'Contignome':
             bigNs, assembled_contig = start_stop_info
             current_position += len(bigNs) + len(assembled_contig)
-            start = (current_position - len(assembled_contig)) - 1
+            start = (current_position - len(assembled_contig)) + 1
             stop = current_position
             line = '{0}_Assembled {1} {2}\n'.format(run_name, start, stop)
             outfile.write(line)
@@ -333,6 +335,7 @@ class GenerateRADnome(Logging):
             start = (current_position - len(contig1)) + 1
             stop = current_position
             line = '{0}_R1_Singletons {1} {2}\n'.format(run_name, start, stop)
+            outfile.write(line)
 
         elif pseudo_genome_type == 'R2nome':
             bigNs, contig1 = start_stop_info
@@ -343,6 +346,11 @@ class GenerateRADnome(Logging):
             outfile.write(line)
 
         return current_position
+
+    def __find_nearest__(self, array, value):
+        n = [abs(i-value) for i in array]
+        idx = n.index(min(n))
+        return array[idx]
 
     def contigs_2_RADnome(self, rad1, rad2, r1_contig_len,
                           r2_contig_len, contig_2_contig_dict,
@@ -386,7 +394,6 @@ class GenerateRADnome(Logging):
 
         contig_positions_out = run_name + '.RADnome.contig_positions.txt'
 
-
         run_results['RADnome_out'] = RADnome_out
 
         if out_path is not None:
@@ -414,7 +421,6 @@ class GenerateRADnome(Logging):
             Contig_nome_out = open(Contig_nome_out, 'w')
             contig_positions_out = open(contig_positions_out, 'w')
 
-
         c2c = pickle.load(open(contig_2_contig_dict, 'rb'))
 
         count = 0
@@ -429,6 +435,9 @@ class GenerateRADnome(Logging):
         radnome_current_position = 0
         r1_current_position = 0
         r2_current_position = 0
+
+        R2_starts = "{}.R2.contig_start_pos.txt".format(run_name)
+        R2_starts = tuple(int(i.strip()) for i in open(R2_starts,'rU'))
 
         for key, value in c2c.iteritems():
             run_results["potential_rad_frags"] += 1
@@ -458,12 +467,15 @@ class GenerateRADnome(Logging):
                 bigNs = "N" * N_padding
                 smallNs = "N" * insert_size
                 contig1 = r1.fetch(r1_name, key, key+r1_contig_len)
-                contig2 = r2.fetch(r2_name, mode[0], mode[0]+r2_contig_len)
 
-                # Track non-mode R2 contigs
+                r2_start = self.__find_nearest__(R2_starts, mode[0])
+                contig2 = r2.fetch(r2_name, r2_start, r2_start+r2_contig_len)
+
                 try:
                     non_mode_contigs = counts.keys().remove(mode)
+                    non_mode_contigs = [self.__find_nearest__(R2_starts, s) for s in non_mode_contigs]
                     r2_unassociated_contigs.extend(non_mode_contigs)
+
                 except ValueError:
                     pass
 
@@ -482,7 +494,6 @@ class GenerateRADnome(Logging):
                     # ADD FRAGMENTS TO CONTIG NOME
                     pos1 = self._append_to_pseudo_genome_(bigNs, Contig_nome_out, contigs_pos, span=80)
                     pos2 = self._append_to_pseudo_genome_(assembled_contig, Contig_nome_out, pos1, span=80)
-                    # print 'ContigNome', pos1, pos2, contigs_pos
                     contigs_pos = pos2
 
                     contignome_current_position = self.write_contig_start_stop_info(contig_positions_out, run_name, contignome_current_position, \
@@ -491,17 +502,16 @@ class GenerateRADnome(Logging):
 
                 else:
                     # ADD FRAGMENTS TO RADNOME
-                    pos1 = self._append_to_pseudo_genome_(bigNs, RADnome_out, RADnome_pos, span=80)
-                    pos2 = self._append_to_pseudo_genome_(contig1, RADnome_out, pos1, span=80)
-                    pos3 = self._append_to_pseudo_genome_(smallNs, RADnome_out, pos2, span=80)
-                    pos4 = self._append_to_pseudo_genome_(contig2, RADnome_out, pos3, span=80)
+                    r_pos1 = self._append_to_pseudo_genome_(bigNs, RADnome_out, RADnome_pos, span=80)
+                    r_pos2 = self._append_to_pseudo_genome_(contig1, RADnome_out, r_pos1, span=80)
+                    r_pos3 = self._append_to_pseudo_genome_(smallNs, RADnome_out, r_pos2, span=80)
+                    r_pos4 = self._append_to_pseudo_genome_(contig2, RADnome_out, r_pos3, span=80)
+                    RADnome_pos = r_pos4
 
-                    RADnome_pos = pos4
-
-                    radnome_current_position = self.write_contig_start_stop_info(contig_positions_out, run_name, radnome_current_position, 
+                    radnome_current_position = self.write_contig_start_stop_info(contig_positions_out, run_name, radnome_current_position,
                                                                                 (bigNs, contig1, smallNs, contig2), 'RADnome')
 
-                    seq_start += pos4
+                    seq_start += r_pos4
                     run_results["associated_contigs"] += 1
 
             # PROCESS R1s
@@ -515,13 +525,26 @@ class GenerateRADnome(Logging):
                 pos1 = self._append_to_pseudo_genome_(bigNs, Singltons_R1_nome_out, singletons_pos_R1, span=80)
                 pos2 = self._append_to_pseudo_genome_(contig1, Singltons_R1_nome_out, pos1, span=80)
 
-
                 r1_current_position = self.write_contig_start_stop_info(contig_positions_out, run_name, r1_current_position, (bigNs, contig1), 'R1nome')
 
                 singletons_pos_R1 = pos2
                 run_results["R1_singletons"] += 1
 
             count += 1
+
+        # PROCESS REMAINING R1s
+
+        for start in open("{}.R1.contig_start_pos.no_pass.txt".format(run_name),'r'):
+
+            start = int(start)
+            contig1 = r1.fetch(r1_name, start, start+r1_contig_len)
+            pos1 = self._append_to_pseudo_genome_(bigNs, Singltons_R1_nome_out, singletons_pos_R1, span=80)
+            pos2 = self._append_to_pseudo_genome_(contig1, Singltons_R1_nome_out, pos1, span=80)
+
+            r1_current_position = self.write_contig_start_stop_info(contig_positions_out, run_name, r1_current_position, (bigNs, contig1), 'R1nome')
+
+            singletons_pos_R1 = pos2
+            run_results["R1_singletons"] += 1
 
         # PROCESS R2s
         singletons_pos_R2 = 0
@@ -575,7 +598,6 @@ class MergeAssemblies(Logging):
         else:
             return 'unpaired'
 
-
     def associate_contigs(self, bam1, sam2, min_mapq, min_depth, run_ID):
 
         run_results = {
@@ -587,6 +609,7 @@ class MergeAssemblies(Logging):
             "searched_sam": sam2,
             # "contig_positions": contig_positions,
             "pickle": None,
+            "failed_filter":0,
             }
 
         contig_2_contig_dict = defaultdict(list)
@@ -600,29 +623,31 @@ class MergeAssemblies(Logging):
 
         R1_sam = pysam.Samfile(bam1,'rb')
         path = os.path.split(bam1)[0]
-        #path = os.path.join(os.path.split(path)[0], 'fastas')
+
         R1_starts = os.path.join(path, "{}.R1.contig_start_pos.txt".format(run_ID))
-        low_depth_R1_starts = os.path.join(path, "{}.low_DP.R1.contig_start_pos.txt".format(run_ID))
+
+        low_depth_R1_starts = os.path.join(path, "{}.R1.contig_start_pos.no_pass.txt".format(run_ID))
         low_depth_R1_starts = open(low_depth_R1_starts, 'w')
 
+        all_R1s = set()
+
         # ITERATE OVER START POSITIONS
-        with open(R1_starts,'rU') as r1_starts:
+        for count, start in enumerate(open(R1_starts,'rU')):
+            query_pos = int(start.strip())
+            all_R1s.update([query_pos])
 
-            for count, start in enumerate(r1_starts):
-                query_pos = int(start.strip())
+            if query_pos is 0:
+                continue
 
-                if query_pos is 0:
-                    continue
+            reads = R1_sam.fetch("{}.R1".format(run_ID), query_pos-5, query_pos+5)
+            reads = [r for r in reads]                  # unpack interator
 
-                reads = R1_sam.fetch("test_run.R1", query_pos-5, query_pos+5)
-                reads = [r for r in reads]                  # unpack interator
+            depth = len(reads)
 
-                depth = len(reads)
+            if depth < min_depth:
+                unassociated_R1s.update([query_pos])
 
-                if depth <= min_depth:
-                    low_depth_R1_starts.write("{}".format(start))
-                    continue
-
+            else:
                 for q in reads:
                     q_id = q.qname[:-1] + "2"               # create query id (e.g., ends with "2")
                     q_mapq = q.mapq                         # and, mapping quality.
@@ -632,11 +657,16 @@ class MergeAssemblies(Logging):
 
                         if (q_mapq > min_mapq) and (s.mapq > min_mapq):
 
-                            run_results["passed_filter"] += 1
-
                             hit_pos = ma.get_hit_pos(s)
                             hit_pos = ma.round_bp_pos(hit_pos)
                             contig_2_contig_dict[query_pos].append(hit_pos)
+
+        run_results["passed_filter"] = len(contig_2_contig_dict.keys())
+
+        unassociated_R1s = all_R1s.difference(set(contig_2_contig_dict.keys()))
+        run_results["failed_filter"] = len(unassociated_R1s)
+
+        [low_depth_R1_starts.write("{}\n".format(p)) for p in unassociated_R1s]
 
         #CREATE PICKLE OUTPUT FILE
         today = datetime.date.today()
