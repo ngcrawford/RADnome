@@ -1,4 +1,4 @@
-Copyright (c) 2013, Nicholas G. Crawford
+Copyright (c) 2013, Nicholas G. Crawford and W. Brian Simison
 
 All rights reserved.
 
