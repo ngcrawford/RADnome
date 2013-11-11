@@ -18,7 +18,11 @@ Most linux distros as well as recent versions of OS X should have python and git
 
 The easiest way to install the necessary dependencies on OS X is to use the [Homebrew package manager][1].
 
-1. Before you begin install [Xcode][10]
+1. Before you begin install [Xcode][10].
+
+3. You should also install the command line tools which you can do directly from the terminal.
+
+        xcode-select --install
 
 1. Open [terminal.app][7] and from the command line run the following commands:
 
