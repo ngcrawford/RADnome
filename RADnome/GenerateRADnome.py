@@ -14,6 +14,7 @@ Add later.
 """
 
 import os
+import sys
 import gzip
 import pysam
 import datetime
@@ -274,6 +275,60 @@ class GenerateRADnome(Logging):
             self.__make_READnome_log__(results_dict, path)
             return 1
 
+    def make_READnome_from_Stacks_tsv(self, tsv_fin, pseudo_genome_fout, Ns, run_name, out_path=None):
+        """Provide input and output file names as well as the number of Ns to insert
+           between contigs.
+        """
+
+        results_dict = {"date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "fin": tsv_fin,
+                        "fout": pseudo_genome_fout,
+                        "Ns": Ns,
+                        "run_name": run_name,
+                        "seq_lengths": []
+                        }
+
+        tsv_fin = self.__open_files__(tsv_fin, 'rb')
+
+        with tsv_fin as fin:
+
+            # SETUP COUNTERS, ETC.
+            id_count = 0
+            current_cluster = collections.defaultdict(list)
+            previous_pos = 0
+            seq_start = 0
+
+            # PREP OUTPUT FILE
+            fout = self.__open_files__(pseudo_genome_fout, 'w')
+            fout.write('>{0}\n'.format(run_name))
+
+            # PREP CONTIG POSITIONS OUTPUT FILE
+            path = os.path.split(pseudo_genome_fout)[0]
+            contig_starts_log = os.path.join(path, '{}.contig_start_pos.txt'.format(run_name))
+            contig_starts_log = open(contig_starts_log, 'w')
+
+            # ITERATE OVER TSV CONTIGS FILE
+            for count, line in enumerate(fin):
+
+                line_parts = line.strip().split()
+                seq = line_parts[8]
+
+                results_dict["seq_lengths"].append(len(seq))
+
+                previous_pos = self._append_to_pseudo_genome_(seq, fout, previous_pos)
+
+                contig_starts_log.write("{}\n".format(seq_start))
+                seq_start += len(seq) + Ns
+
+                Ns2add = "N" * Ns
+                previous_pos = self._append_to_pseudo_genome_(Ns2add, fout, previous_pos)
+
+            fout.write("\n")
+            fout.close()
+
+            self.__make_READnome_log__(results_dict, path)
+            return 1
+
     def filter_contigs(self, c, p):
         """"""
 
@@ -285,7 +340,6 @@ class GenerateRADnome(Logging):
     def __get_fasta_header__(self, fasta_path):
         header_line = open(fasta_path, 'rU').readline()
         return header_line.strip(">").strip()
-
 
     def __make_consensus__(self, seq):
         cons = ""
@@ -302,7 +356,6 @@ class GenerateRADnome(Logging):
                 cons += s
 
         return cons
-
 
     def test(self):
         unique_items = set([item for sublist in c2c.values() for item in sublist])
@@ -355,7 +408,9 @@ class GenerateRADnome(Logging):
     def contigs_2_RADnome(self, rad1, rad2, r1_contig_len,
                           r2_contig_len, contig_2_contig_dict,
                           run_name, N_padding, insert_size,
-                          proportion, overlap, out_path=None):
+                          proportion, overlap, out_path=None,
+                          R2_starts='{}.R2.contig_start_pos.txt',
+                          remaining_R1s="{}.R1.contig_start_pos.no_pass.txt"):
 
         C = ContigAssembler()
         run_results = {
@@ -436,7 +491,7 @@ class GenerateRADnome(Logging):
         r1_current_position = 0
         r2_current_position = 0
 
-        R2_starts = "{}.R2.contig_start_pos.txt".format(run_name)
+        R2_starts = R2_starts.format(run_name)
         R2_starts = tuple(int(i.strip()) for i in open(R2_starts,'rU'))
 
         for key, value in c2c.iteritems():
@@ -533,8 +588,8 @@ class GenerateRADnome(Logging):
             count += 1
 
         # PROCESS REMAINING R1s
-
-        for start in open("{}.R1.contig_start_pos.no_pass.txt".format(run_name),'r'):
+        #remaining_R1s = "{}.R1.contig_start_pos.no_pass.txt"
+        for start in open(remaining_R1s.format(run_name),'r'):
 
             start = int(start)
             contig1 = r1.fetch(r1_name, start, start+r1_contig_len)
@@ -806,5 +861,15 @@ class ContigAssembler(object):
 
 
 if __name__ == '__main__':
+    G = GenerateRADnome()
+
+    tsv_fin ="/Users/ngcrawford/Dropbox/JMP_CAS/Nick/Stacks_output/batch_1.catalog.tags_R2.tsv"
+    pseudo_genome_fout = 'stacksnome.fa'
+    Ns = 500
+    run_name = 'test_run'
+
+    G.make_READnome_from_Stacks_tsv(tsv_fin, pseudo_genome_fout, Ns, run_name)
+
+
     pass
 
