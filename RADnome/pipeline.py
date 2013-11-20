@@ -303,34 +303,48 @@ class RunPipeline(object):
         return 1
 
     def pipeline(self, fq1, fq2, run_ID, N_padding, insert_size,
-                     proportion, overlap, cores):
+                     proportion, overlap, cores, stacks_contigs):
 
-        # -----------
-        # Run Rainbow
-        # -----------
 
-        sys.stdout.write("""Generating RADnome: '{0}' on {1}\n\n""".format(run_ID, datetime.date.today()))
+        if stacks_contigs == False:
+            # -----------
+            # Run Rainbow
+            # -----------
 
-        sys.stdout.write("Step 1: Running Rainbow Cluster ...\n")
-        self.run_cluster_cmd(fq1)
-        self.run_cluster_cmd(fq2)
+            sys.stdout.write("""Generating RADnome: '{0}' on {1}\n\n""".format(run_ID, datetime.date.today()))
 
-        sys.stdout.write("Step 2: Running Rainbow Div ...\n")
-        self.run_div_cmd(fq1)
-        self.run_div_cmd(fq2)
+            sys.stdout.write("Step 1: Running Rainbow Cluster ...\n")
+            self.run_cluster_cmd(fq1)
+            self.run_cluster_cmd(fq2)
 
-        sys.stdout.write("Step 3: Running Rainbow Merge ...\n")
-        self.run_merge_cmd(fq1)
-        self.run_merge_cmd(fq2)
+            sys.stdout.write("Step 2: Running Rainbow Div ...\n")
+            self.run_div_cmd(fq1)
+            self.run_div_cmd(fq2)
 
-        # -------------------------------
-        # Generate READnomes and RADnomes
-        # -------------------------------
+            sys.stdout.write("Step 3: Running Rainbow Merge ...\n")
+            self.run_merge_cmd(fq1)
+            self.run_merge_cmd(fq2)
 
-        sys.stdout.write("Step 4: Creating R1 and R2 READnomes ...\n")
-        self.make_READnome(fq1, "{}.R1".format(run_ID))
-        self.make_READnome(fq2, "{}.R2".format(run_ID))
+            # ------------------
+            # Generate READnomes
+            # ------------------
 
+            sys.stdout.write("Step 4: Creating R1 and R2 READnomes ...\n")
+
+            self.make_READnome(fq1, "{}.R1".format(run_ID))
+            self.make_READnome(fq2, "{}.R2".format(run_ID))
+
+        else:
+
+            sys.stdout.write("Step 1-4: Creating R1 and R2 READnomes\nfrom stacks tsv files ...\n")
+
+            self.make_READnome_from_Stacks_tsv(fq1, "{}.R1".format(run_ID))
+            self.make_READnome_from_Stacks_tsv(fq2, "{}.R2".format(run_ID))
+            sys.exit()
+
+        # ---------------------------------
+        # Bowtie contig associtations, etc.
+        # ---------------------------------
 
         sys.stdout.write("Step 5: Running Bowtie2 ...\n")
 

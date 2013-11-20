@@ -52,14 +52,14 @@ class TestCmds(unittest.TestCase):
         # Reset working directory
         os.chdir(self.base_dir)
 
-    @classmethod
-    def tearDownClass(self):
-        """Clean up the mess (e.g., data and tmp dir)"""
+    # @classmethod
+    # def tearDownClass(self):
+    #     """Clean up the mess (e.g., data and tmp dir)"""
 
-        test_data = os.path.join(self.base_dir, "tests/data/data")
-        shutil.rmtree(test_data)
-        tmp = os.path.join(self.base_dir, "tests/data/tmp")
-        shutil.rmtree(tmp)
+    #     test_data = os.path.join(self.base_dir, "tests/data/data")
+    #     shutil.rmtree(test_data)
+    #     tmp = os.path.join(self.base_dir, "tests/data/tmp")
+    #     shutil.rmtree(tmp)
 
     def test_cluster_cmd(self):
         """Test rainbow clustering wrapper."""
@@ -123,6 +123,8 @@ class TestCmds(unittest.TestCase):
         r2_contig_len = seq_len(os.path.join(self.test_data, "data/fq2.10k.fq"))
         contig_2_contig_dict = os.path.join(self.test_data, "data/fastas/test_run.R1_to_R2_contig_associations.pkl")
 
+        R2_starts = os.path.join(self.test_data, 'data/alignments/{}.R2.contig_start_pos.txt')
+        remaining_R1s = os.path.join(self.test_data, 'data/alignments/{}.R1.contig_start_pos.no_pass.txt')
         run_name = self.run_ID
         N_padding = 500
         insert_size = 50
@@ -141,10 +143,13 @@ class TestCmds(unittest.TestCase):
                                      insert_size,
                                      proportion,
                                      overlap,
-                                     out_path)
+                                     out_path,
+                                     R2_starts,
+                                     remaining_R1s)
         self.assertTrue(z)
 
 
+    def test_contigs_2_RADnome(self):
         # g = P.make_READnome(fq1, R1, out_path=self.test_data)
         # h = P.make_READnome(fq2, R2, out_path=self.test_data)
 
