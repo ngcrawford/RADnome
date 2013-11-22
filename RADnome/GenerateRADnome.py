@@ -357,12 +357,12 @@ class GenerateRADnome(Logging):
 
         return cons
 
-    def test(self):
-        unique_items = set([item for sublist in c2c.values() for item in sublist])
-        min_i = min(z)
-        max_i = max(z)
-        full_set = set(xrange(min_i, max_i + 1, 600))
-        print sorted(list(full_set - unique_items))
+    # def test(self):
+    #     unique_items = set([item for sublist in c2c.values() for item in sublist])
+    #     min_i = min(z)
+    #     max_i = max(z)
+    #     full_set = set(xrange(min_i, max_i + 1, 600))
+    #     print sorted(list(full_set - unique_items))
 
     def write_contig_start_stop_info(self, outfile, run_name, current_position, start_stop_info, pseudo_genome_type):
 
@@ -654,9 +654,6 @@ class MergeAssemblies(Logging):
             return 'unpaired'
 
     def associate_contigs(self, bam1, sam2, min_mapq, min_depth, run_ID):
-
-        print os.getcwd()
-        print bam1, sam2, min_mapq, min_depth, run_ID
 
         run_results = {
             "total_queries": 0,

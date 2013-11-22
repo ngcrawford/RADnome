@@ -48,6 +48,8 @@ class TestCmds(unittest.TestCase):
                           stdout=PIPE,
                           stderr=PIPE).communicate()
 
+        print os.getcwd()
+
         # Make tmp dir (TO DO redo with 'real' tempdir)
         os.mkdir(os.path.join(self.base_dir, "tests/data/tmp"))
 
@@ -195,7 +197,6 @@ class TestPipeline(unittest.TestCase):
 
         n = P.ascContigs(fq1, fq2,  min_mapq=3, min_depth=10, 
                          run_ID=run_ID, out_path=self.test_data)
-
 
         #def make_RADnome(self, fq1, fq2, run_ID, N_padding, insert_size,
         #             proportion, overlap, out_path=None)
