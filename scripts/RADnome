@@ -253,10 +253,10 @@ def get_args():
 
     parser_pipeline.add_argument(
         '-s', '--stacks-contigs',
-        type=int,
-        default=3,
-        help="Provide 'Batch Tags' contig file from Stacks \
-              instead of Rainbow")
+        type=str,
+        nargs=2,
+        help="Provide 'Batch Tags' contig files from Stacks \
+              instead of Rainbow.")
 
 
     # LOGIC TO SELECT AND RUN APPROPRIATE SUB-COMMAND.

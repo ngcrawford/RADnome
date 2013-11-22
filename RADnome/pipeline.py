@@ -98,6 +98,21 @@ class RunPipeline(object):
         G.make_READnome(asm, fa, buff, run_ID, out_path)
         return 1
 
+    def make_READnome_from_Stacks_tsv(self, tsv_fin, fq_id, run_ID, buff=500, out_path=None):
+
+        if out_path != None:
+            fout_name = os.path.split(fq_id)[-1]
+            fout = os.path.join(out_path, fout_name)
+        else:
+            fout = os.path.split(fq_id)[-1]
+
+        asm = tsv_fin
+        fa = "{}.asm.fa".format(fout)
+
+        G = GenerateRADnome()
+        G.make_READnome_from_Stacks_tsv(asm, fa, buff, run_ID, out_path)
+        return 1
+
     def run_bowtie2(self, fq_id, cores, out_path=None):
 
         if out_path != None:
@@ -306,7 +321,7 @@ class RunPipeline(object):
                      proportion, overlap, cores, stacks_contigs):
 
 
-        if stacks_contigs == False:
+        if len(stacks_contigs) is not 2:
             # -----------
             # Run Rainbow
             # -----------
@@ -336,11 +351,11 @@ class RunPipeline(object):
 
         else:
 
-            sys.stdout.write("Step 1-4: Creating R1 and R2 READnomes\nfrom stacks tsv files ...\n")
+            sys.stdout.write("Steps 1-4: Creating R1 and R2 READnomes\n           from stacks tsv files ...\n")
 
-            self.make_READnome_from_Stacks_tsv(fq1, "{}.R1".format(run_ID))
-            self.make_READnome_from_Stacks_tsv(fq2, "{}.R2".format(run_ID))
-            sys.exit()
+            self.make_READnome_from_Stacks_tsv(stacks_contigs[0], fq1, "{}.R1".format(run_ID))
+            self.make_READnome_from_Stacks_tsv(stacks_contigs[0], fq2, "{}.R2".format(run_ID))
+            #sys.exit()
 
         # ---------------------------------
         # Bowtie contig associtations, etc.
