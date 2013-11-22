@@ -655,6 +655,9 @@ class MergeAssemblies(Logging):
 
     def associate_contigs(self, bam1, sam2, min_mapq, min_depth, run_ID):
 
+        print os.getcwd()
+        print bam1, sam2, min_mapq, min_depth, run_ID
+
         run_results = {
             "total_queries": 0,
             "passed_filter": 0,
@@ -699,22 +702,22 @@ class MergeAssemblies(Logging):
 
             depth = len(reads)
 
-            if depth < min_depth:
-                unassociated_R1s.update([query_pos])
+            # if depth < min_depth:
+            #     unassociated_R1s.update([query_pos])
 
-            else:
-                for q in reads:
-                    q_id = q.qname[:-1] + "2"               # create query id (e.g., ends with "2")
-                    q_mapq = q.mapq                         # and, mapping quality.
 
-                    # SEARCH FOR QUERY AND PARSE RESULTS
-                    for s in fi[q_id]:
+            for q in reads:
+                q_id = q.qname[:-1] + "2"               # create query id (e.g., ends with "2")
+                q_mapq = q.mapq                         # and, mapping quality.
 
-                        if (q_mapq > min_mapq) and (s.mapq > min_mapq):
+                # SEARCH FOR QUERY AND PARSE RESULTS
+                for s in fi[q_id]:
 
-                            hit_pos = ma.get_hit_pos(s)
-                            hit_pos = ma.round_bp_pos(hit_pos)
-                            contig_2_contig_dict[query_pos].append(hit_pos)
+                    if (q_mapq > min_mapq) and (s.mapq > min_mapq):
+
+                        hit_pos = ma.get_hit_pos(s)
+                        hit_pos = ma.round_bp_pos(hit_pos)
+                        contig_2_contig_dict[query_pos].append(hit_pos)
 
         run_results["passed_filter"] = len(contig_2_contig_dict.keys())
 

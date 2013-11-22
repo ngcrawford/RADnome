@@ -12,7 +12,9 @@ import shutil
 
 import unittest
 from subprocess import Popen, PIPE
-from RADnome import GenerateRADnome, pipeline
+import pipeline
+from RADnome import GenerateRADnome
+
 
 
 class TestCmds(unittest.TestCase):
@@ -52,14 +54,14 @@ class TestCmds(unittest.TestCase):
         # Reset working directory
         os.chdir(self.base_dir)
 
-    # @classmethod
-    # def tearDownClass(self):
-    #     """Clean up the mess (e.g., data and tmp dir)"""
+    @classmethod
+    def tearDownClass(self):
+        """Clean up the mess (e.g., data and tmp dir)"""
 
-    #     test_data = os.path.join(self.base_dir, "tests/data/data")
-    #     shutil.rmtree(test_data)
-    #     tmp = os.path.join(self.base_dir, "tests/data/tmp")
-    #     shutil.rmtree(tmp)
+        test_data = os.path.join(self.base_dir, "tests/data/data")
+        shutil.rmtree(test_data)
+        tmp = os.path.join(self.base_dir, "tests/data/tmp")
+        shutil.rmtree(tmp)
 
     def test_cluster_cmd(self):
         """Test rainbow clustering wrapper."""
@@ -149,85 +151,75 @@ class TestCmds(unittest.TestCase):
         self.assertTrue(z)
 
 
-    def test_contigs_2_RADnome(self):
-        # g = P.make_READnome(fq1, R1, out_path=self.test_data)
-        # h = P.make_READnome(fq2, R2, out_path=self.test_data)
+class TestPipeline(unittest.TestCase):
 
-        # i = P.run_bowtie2(fq1, cores=1, out_path=self.test_data)
-        # j = P.run_bowtie2(fq2, cores=1, out_path=self.test_data)
+    def setUp(self):
+        module_dir = os.path.dirname(GenerateRADnome.__file__)
+        base_dir = os.path.split(module_dir)[0]
+        self.test_data = os.path.join(base_dir, "tests/data")
+        self.run_ID = 'test'
+        pass
 
-        # l = P.sam_to_sorted_sam(fq1, out_path=self.test_data)
-        # m = P.sam_to_sorted_sam(fq2, out_path=self.test_data)
+    def test_pipeline(self):
+        """Run complete pipline with test data."""
 
+        P = pipeline.RunPipeline()
 
-# class TestPipeline(unittest.TestCase):
+        #  SETUP PATHS TO OUTPUT FILES
+        fq1 = os.path.join(self.test_data, "fq1.10k.fq")
+        fq2 = os.path.join(self.test_data, "fq2.10k.fq")
 
-#     def setUp(self):
-#         module_dir = os.path.dirname(GenerateRADnome.__file__)
-#         base_dir = os.path.split(module_dir)[0]
-#         self.test_data = os.path.join(base_dir, "tests/data")
-#         self.run_ID = 'test'
-#         pass
+        R1 = os.path.join(self.test_data, "test.R1")
+        R2 = os.path.join(self.test_data, "test.R2")
 
-#     def test_pipeline(self):
-#         """Run comlete pipline with test data."""
+        run_ID = self.run_ID
 
-#         P = GenerateRADnome.RunPipeline()
+        #  RUN STEPS OF PIPLINE
+        a = P.run_cluster_cmd(fq1)
+        b = P.run_cluster_cmd(fq2)
 
-#         #  SETUP PATHS TO OUTPUT FILES
-#         fq1 = os.path.join(self.test_data, "fq1.10k.fq")
-#         fq2 = os.path.join(self.test_data, "fq2.10k.fq")
+        c = P.run_div_cmd(fq1, out_path=self.test_data)
+        d = P.run_div_cmd(fq2, out_path=self.test_data)
 
-#         R1 = os.path.join(self.test_data, "test.R1")
-#         R2 = os.path.join(self.test_data, "test.R2")
+        e = P.run_merge_cmd(fq1, out_path=self.test_data)
+        f = P.run_merge_cmd(fq2, out_path=self.test_data)
 
-#         run_ID = self.run_ID
+        g = P.make_READnome(fq1, R1, out_path=self.test_data)
+        h = P.make_READnome(fq2, R2, out_path=self.test_data)
 
-#         #  RUN STEPS OF PIPLINE
-#         a = P.run_cluster_cmd(fq1)
-#         b = P.run_cluster_cmd(fq2)
+        i = P.run_bowtie2(fq1, cores=1, out_path=self.test_data)
+        j = P.run_bowtie2(fq2, cores=1, out_path=self.test_data)
 
-#         c = P.run_div_cmd(fq1, out_path=self.test_data)
-#         d = P.run_div_cmd(fq2, out_path=self.test_data)
+        l = P.sam_to_sorted_sam(fq1, out_path=self.test_data)
+        m = P.sam_to_sorted_sam(fq2, out_path=self.test_data)
 
-#         e = P.run_merge_cmd(fq1, out_path=self.test_data)
-#         f = P.run_merge_cmd(fq2, out_path=self.test_data)
-
-#         g = P.make_READnome(fq1, R1, out_path=self.test_data)
-#         h = P.make_READnome(fq2, R2, out_path=self.test_data)
-
-#         i = P.run_bowtie2(fq1, cores=1, out_path=self.test_data)
-#         j = P.run_bowtie2(fq2, cores=1, out_path=self.test_data)
-
-#         l = P.sam_to_sorted_sam(fq1, out_path=self.test_data)
-#         m = P.sam_to_sorted_sam(fq2, out_path=self.test_data)
-
-#         n = P.ascContigs(fq1, fq2, run_ID, min_mapq=3,
-#                          out_path=self.test_data)
-
-#         o = P.make_RADnome(fq1, fq2, run_ID, out_path=self.test_data)
-
-#         results =                 [a, b, c, d, e, f, g, h, i, j, l, m, n, o]
-#         self.assertEqual(results, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
+        n = P.ascContigs(fq1, fq2,  min_mapq=3, min_depth=10, 
+                         run_ID=run_ID, out_path=self.test_data)
 
 
-#     def tearDown(self):
-#         """Remove intermediate files from test/data directory."""
+        #def make_RADnome(self, fq1, fq2, run_ID, N_padding, insert_size,
+        #             proportion, overlap, out_path=None)
 
-#         files = os.path.join(self.test_data, "*.txt")
-#         [os.remove(p) for p in glob.glob(files)]
+        o = P.make_RADnome(fq1, fq2, run_ID, N_padding=500,
+                           insert_size=50, proportion=0.8,
+                           overlap=10, out_path=self.test_data)
 
-#         files = os.path.join(self.test_data, "fq*.10k.fq.*")
-#         [os.remove(p) for p in glob.glob(files)]
-
-#         files = os.path.join(self.test_data, "{}*".format(self.run_ID))
-#         [os.remove(p) for p in glob.glob(files)]
+        results =                 [a, b, c, d, e, f, g, h, i, j, l, m, n, o]
+        self.assertEqual(results, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 
 
+    def tearDown(self):
+        """Remove intermediate files from test/data directory."""
 
+        files = os.path.join(self.test_data, "*.txt")
+        [os.remove(p) for p in glob.glob(files)]
 
+        files = os.path.join(self.test_data, "fq*.10k.fq.*")
+        [os.remove(p) for p in glob.glob(files)]
 
-
+        files = os.path.join(self.test_data, "{}*".format(self.run_ID))
+        [os.remove(p) for p in glob.glob(files)]
 
 if __name__ == '__main__':
     unittest.main()
+
