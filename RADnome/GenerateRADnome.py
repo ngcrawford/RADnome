@@ -653,7 +653,9 @@ class MergeAssemblies(Logging):
         else:
             return 'unpaired'
 
-    def associate_contigs(self, bam1, sam2, min_mapq, min_depth, run_ID):
+    def associate_contigs(self, bam1, sam2, R1_starts, min_mapq, run_ID):
+        # print bam1, sam2, min_mapq, run_ID
+        # sys.exit()
 
         run_results = {
             "total_queries": 0,
@@ -679,7 +681,8 @@ class MergeAssemblies(Logging):
         R1_sam = pysam.Samfile(bam1,'rb')
         path = os.path.split(bam1)[0]
 
-        R1_starts = os.path.join(path, "{}.R1.contig_start_pos.txt".format(run_ID))
+        if R1_starts == None:
+            R1_starts = os.path.join(path, "{}.R1.contig_start_pos.txt".format(run_ID))
 
         low_depth_R1_starts = os.path.join(path, "{}.R1.contig_start_pos.no_pass.txt".format(run_ID))
         low_depth_R1_starts = open(low_depth_R1_starts, 'w')
@@ -694,6 +697,8 @@ class MergeAssemblies(Logging):
             if query_pos is 0:
                 continue
 
+            #print "{}.R1".format(run_ID), query_pos-5, query_pos+5
+            # samtools view alignments/Trachs_Merged.1.fq.sorted.bam Trachs_Merged_stacks.R1:590-600
             reads = R1_sam.fetch("{}.R1".format(run_ID), query_pos-5, query_pos+5)
             reads = [r for r in reads]                  # unpack interator
 
@@ -702,10 +707,10 @@ class MergeAssemblies(Logging):
             # if depth < min_depth:
             #     unassociated_R1s.update([query_pos])
 
-
             for q in reads:
                 q_id = q.qname[:-1] + "2"               # create query id (e.g., ends with "2")
                 q_mapq = q.mapq                         # and, mapping quality.
+
 
                 # SEARCH FOR QUERY AND PARSE RESULTS
                 for s in fi[q_id]:

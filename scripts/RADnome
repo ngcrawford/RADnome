@@ -42,7 +42,8 @@ def generate_RADnome(args):
 
 def assoicate_contigs(args):
     M = MergeAssemblies()
-    M.associate_contigs(args.sams[0], args.sams[1], args.pos_file, args.minimum_MAPQ)
+    M.associate_contigs(args.sams[0], args.sams[1], args.pos_file, 
+                        args.minimum_MAPQ, args.run_name)
 
 def run_pipeline(args):
     P = RunPipeline()
@@ -170,7 +171,9 @@ def get_args():
         '-s', '--sams',
         type=str,
         nargs=2,
-        help="Forward and Reverse SAM files. Note that order matters.")
+        help="""Forward and Reverse BAM and SAM files. Both files should be sorted and 
+                indexed. The first is a Bam file containing the R1 reads and the second
+                a SAM file containing the R2 reads. Note that order matters""")
 
     parser_ascContigs.add_argument(
         '-p', '--pos-file',
