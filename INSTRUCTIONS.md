@@ -51,12 +51,6 @@ The easiest way to install the necessary dependencies on OS X is to use the [Hom
         brew install tabix
         brew install wget
 
-4. Install [pysam][11]. Unfortunately installing pysam can be a bit of a PITA as the newer versions tend to contain compilation bugs. So, my recommendation (as of 7/19/13) is to install pysam version 0.6 which seems to install without errors.
-
-        wget https://pysam.googlecode.com/files/pysam-0.6.tar.gz
-        tar -xzf pysam-0.6.tar.gz
-        cd pysam-0.6
-        sudo python setup.py install
 
 ### Linux:
 
@@ -72,6 +66,8 @@ Tokyo Cabinet can be a pain to install. I recommend using `deb` or `RPM` package
     git clone https://github.com/ngcrawford/RADnome
     cd RADnome
     python setup.py develop
+    
+The setup.py script should automatically install two required python modules: pysam and py-tcdb.
 
 ### Run UnitTests:
 
