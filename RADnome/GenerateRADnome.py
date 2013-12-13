@@ -653,7 +653,7 @@ class MergeAssemblies(Logging):
         else:
             return 'unpaired'
 
-    def associate_contigs(self, bam1, sam2, R1_starts, min_mapq, run_ID):
+    def associate_contigs(self, bam1, sam2, min_mapq, run_ID, R1_starts=None):
         # print bam1, sam2, min_mapq, run_ID
         # sys.exit()
 
