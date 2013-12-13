@@ -109,7 +109,8 @@ class TestCmds(unittest.TestCase):
         min_mapq = self.min_mapq
         min_depth = self.min_depth
 
-        z = self.M.associate_contigs(bam1, sam2, min_mapq, min_depth, run_ID)
+        z = self.M.associate_contigs(bam1, sam2, min_mapq, run_ID, R1_starts=None)
+        # bam1, sam2, min_mapq, run_ID, R1_starts=None
         self.assertTrue(z)
 
     def test_contigs_2_RADnome(self):
