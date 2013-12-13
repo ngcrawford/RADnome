@@ -218,7 +218,9 @@ class RunPipeline(object):
         contig_positions = "{}.R1.contig_start_pos.txt".format(run_ID)
 
         M = MergeAssemblies()
-        log = M.associate_contigs(bam1, sam2, min_mapq, min_depth, run_ID)
+        log = M.associate_contigs(bam1, sam2, min_mapq, run_ID)
+
+        #         bam1, sam2, R1_starts, min_mapq, run_ID
         return 1
 
     def make_RADnome(self, fq1, fq2, run_ID, N_padding, insert_size,
@@ -320,8 +322,9 @@ class RunPipeline(object):
     def pipeline(self, fq1, fq2, run_ID, N_padding, insert_size,
                      proportion, overlap, cores, stacks_contigs):
 
+        #print fq1, fq2, run_ID, N_padding, insert_size, proportion, overlap, cores, stacks_contigs
 
-        if len(stacks_contigs) is not 2:
+        if stacks_contigs is None:
             # -----------
             # Run Rainbow
             # -----------
