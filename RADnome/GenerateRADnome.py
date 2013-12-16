@@ -494,6 +494,10 @@ class GenerateRADnome(Logging):
         R2_starts = R2_starts.format(run_name)
         R2_starts = tuple(int(i.strip()) for i in open(R2_starts,'rU'))
 
+        print R2_starts
+
+        print "R2 stats", len(R2_starts)
+
         for key, value in c2c.iteritems():
             run_results["potential_rad_frags"] += 1
 
@@ -507,6 +511,7 @@ class GenerateRADnome(Logging):
 
             # WRITE FASTA HEADER
             if count == 0:
+
                 RADnome_out.write('>{}_NonOverlapping\n'.format(run_name))
                 Contig_nome_out.write('>{}_Assembled\n'.format(run_name))
                 Singltons_R1_nome_out.write('>{}_R1_Singletons\n'.format(run_name))
@@ -526,13 +531,22 @@ class GenerateRADnome(Logging):
                 r2_start = self.__find_nearest__(R2_starts, mode[0])
                 contig2 = r2.fetch(r2_name, r2_start, r2_start+r2_contig_len)
 
-                try:
-                    non_mode_contigs = counts.keys().remove(mode)
-                    non_mode_contigs = [self.__find_nearest__(R2_starts, s) for s in non_mode_contigs]
-                    r2_unassociated_contigs.extend(non_mode_contigs)
+                if len(counts.keys()) > 1:
 
-                except ValueError:
-                    pass
+                    try:
+                        non_mode_contigs = counts.keys()
+                        non_mode_contigs.remove(mode[0])
+                        non_mode_contigs = [self.__find_nearest__(R2_starts, s) for s in non_mode_contigs]
+                        r2_unassociated_contigs.extend(non_mode_contigs)
+
+                    except:
+                        # Typicallly this exception occurs 
+                        print "problem:", counts, mode, non_mode_contigs
+                        print counts.keys().remove(mode[0])
+                        #print r2_start, counts, mode
+                        #print counts.keys().remove(mode)
+
+                        pass
 
                 # RAINBOW orientation is reversed for the R1 reads
                 # so it is necessary to flip contig1's oriention
@@ -720,6 +734,10 @@ class MergeAssemblies(Logging):
                         hit_pos = ma.get_hit_pos(s)
                         hit_pos = ma.round_bp_pos(hit_pos)
                         contig_2_contig_dict[query_pos].append(hit_pos)
+
+        print 'R1s associated:', len(contig_2_contig_dict.keys())
+        print 'R1s un-associated:', len(all_R1s.difference(set(contig_2_contig_dict.keys())))
+
 
         run_results["passed_filter"] = len(contig_2_contig_dict.keys())
 
