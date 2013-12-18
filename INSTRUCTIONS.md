@@ -83,6 +83,11 @@ UnitTests are located in `RADnome/tests.py` and can be run with `nosetests` or t
     --run-name test_run \
     --cores 3
 
+### Prepare your data:
+
+We did our best to ensure that RADnome can work with reads straight off the sequencer. Your R1 and R2 reads should be in seperate files. The read IDs are expected to be idential except for the last character which should either be 1 or 2 depending upon . In most cases this is the default. 
+
+
 ### Updating RADnome:
 
 To update the RADnome code to the newest version you just need to pull the changes from the repo. Since you installed RADnome using the `develop` flag these changes will immediately populate through out your system. There is no need to run setup.py again.
