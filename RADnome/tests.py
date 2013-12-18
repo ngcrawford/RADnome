@@ -103,13 +103,14 @@ class TestCmds(unittest.TestCase):
 
         bam1 = os.path.join(self.test_data, "data/alignments/fq1.10k.fq.sorted.bam")
         sam2 = os.path.join(self.test_data, "data/alignments/fq2.10k.fq.sorted.sam")
-        contig_positions = os.path.join(self.test_data, "data/fastas/test_run.R1_to_R2_contig_associations.pkl")
+        R1_starts = os.path.join(self.test_data, "data/alignments/test_run.R1.contig_start_pos.txt")
+        R2_starts = os.path.join(self.test_data, "data/alignments/test_run.R2.contig_start_pos.txt")
 
         run_ID = self.run_ID
         min_mapq = self.min_mapq
         min_depth = self.min_depth
 
-        z = self.M.associate_contigs(bam1, sam2, min_mapq, run_ID, R1_starts=None)
+        z = self.M.associate_contigs(bam1, sam2, min_mapq, run_ID, R1_starts, R2_starts)
         # bam1, sam2, min_mapq, run_ID, R1_starts=None
         self.assertTrue(z)
 
@@ -210,17 +211,17 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(results, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 
 
-    def tearDown(self):
-        """Remove intermediate files from test/data directory."""
+    # def tearDown(self):
+    #     """Remove intermediate files from test/data directory."""
 
-        files = os.path.join(self.test_data, "*.txt")
-        [os.remove(p) for p in glob.glob(files)]
+    #     files = os.path.join(self.test_data, "*.txt")
+    #     [os.remove(p) for p in glob.glob(files)]
 
-        files = os.path.join(self.test_data, "fq*.10k.fq.*")
-        [os.remove(p) for p in glob.glob(files)]
+    #     files = os.path.join(self.test_data, "fq*.10k.fq.*")
+    #     [os.remove(p) for p in glob.glob(files)]
 
-        files = os.path.join(self.test_data, "{}*".format(self.run_ID))
-        [os.remove(p) for p in glob.glob(files)]
+    #     files = os.path.join(self.test_data, "{}*".format(self.run_ID))
+    #     [os.remove(p) for p in glob.glob(files)]
 
 if __name__ == '__main__':
     unittest.main()

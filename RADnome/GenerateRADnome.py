@@ -17,6 +17,7 @@ import os
 import sys
 import gzip
 import pysam
+import bisect
 import datetime
 import textwrap
 import collections
@@ -485,6 +486,7 @@ class GenerateRADnome(Logging):
         contigs_pos = 0
         seq_start = 1
         r2_unassociated_contigs = []
+        r2_assoicated_contigs = []
 
         contignome_current_position = 0
         radnome_current_position = 0
@@ -494,10 +496,8 @@ class GenerateRADnome(Logging):
         R2_starts = R2_starts.format(run_name)
         R2_starts = tuple(int(i.strip()) for i in open(R2_starts,'rU'))
 
-        print R2_starts
 
-        print "R2 stats", len(R2_starts)
-
+        # ITERATE OVER R1 CONTIG KEYS IN CONTIG-2-CONTIG DICTIONARY
         for key, value in c2c.iteritems():
             run_results["potential_rad_frags"] += 1
 
@@ -531,6 +531,8 @@ class GenerateRADnome(Logging):
                 r2_start = self.__find_nearest__(R2_starts, mode[0])
                 contig2 = r2.fetch(r2_name, r2_start, r2_start+r2_contig_len)
 
+                r2_assoicated_contigs.append(contig2)
+
                 if len(counts.keys()) > 1:
 
                     try:
@@ -540,12 +542,6 @@ class GenerateRADnome(Logging):
                         r2_unassociated_contigs.extend(non_mode_contigs)
 
                     except:
-                        # Typicallly this exception occurs 
-                        print "problem:", counts, mode, non_mode_contigs
-                        print counts.keys().remove(mode[0])
-                        #print r2_start, counts, mode
-                        #print counts.keys().remove(mode)
-
                         pass
 
                 # RAINBOW orientation is reversed for the R1 reads
@@ -600,6 +596,11 @@ class GenerateRADnome(Logging):
                 run_results["R1_singletons"] += 1
 
             count += 1
+
+        # print 'un-associated R2s', len(r2_unassociated_contigs), len(set(r2_unassociated_contigs))
+        # print 'associated R2s', len(r2_assoicated_contigs), len(set(r2_assoicated_contigs))
+
+        # print 'set dif', len(list(set(r2_unassociated_contigs) - set(r2_assoicated_contigs)))
 
         # PROCESS REMAINING R1s
         #remaining_R1s = "{}.R1.contig_start_pos.no_pass.txt"
@@ -667,7 +668,24 @@ class MergeAssemblies(Logging):
         else:
             return 'unpaired'
 
-    def associate_contigs(self, bam1, sam2, min_mapq, run_ID, R1_starts=None):
+    @staticmethod
+    def closest_starting_pos(positions, value, array_size):
+        
+        insert_point = bisect.bisect(positions, value)
+
+        if insert_point >= array_size:
+            return positions[insert_point-1]
+
+        else:
+
+            left, right = positions[insert_point-1], positions[insert_point]
+            
+            if abs(left - insert_point) > abs(right - insert_point):
+                return right
+            else:
+                return left
+
+    def associate_contigs(self, bam1, sam2, min_mapq, run_ID, R1_starts=None, R2_starts=None):
         # print bam1, sam2, min_mapq, run_ID
         # sys.exit()
 
@@ -698,6 +716,13 @@ class MergeAssemblies(Logging):
         if R1_starts == None:
             R1_starts = os.path.join(path, "{}.R1.contig_start_pos.txt".format(run_ID))
 
+        if R2_starts == None:
+            R2_starts = os.path.join(path, "{}.R2.contig_start_pos.txt".format(run_ID))
+        
+        R2_starts = [int(l.strip()) for l in open(R2_starts,'rU')]
+
+        R2_starts_len = len(set(R2_starts))
+
         low_depth_R1_starts = os.path.join(path, "{}.R1.contig_start_pos.no_pass.txt".format(run_ID))
         low_depth_R1_starts = open(low_depth_R1_starts, 'w')
 
@@ -714,17 +739,11 @@ class MergeAssemblies(Logging):
             #print "{}.R1".format(run_ID), query_pos-5, query_pos+5
             # samtools view alignments/Trachs_Merged.1.fq.sorted.bam Trachs_Merged_stacks.R1:590-600
             reads = R1_sam.fetch("{}.R1".format(run_ID), query_pos-5, query_pos+5)
-            reads = [r for r in reads]                  # unpack interator
-
-            depth = len(reads)
-
-            # if depth < min_depth:
-            #     unassociated_R1s.update([query_pos])
+            #reads = [r for r in reads]                  # unpack interator
 
             for q in reads:
                 q_id = q.qname[:-1] + "2"               # create query id (e.g., ends with "2")
                 q_mapq = q.mapq                         # and, mapping quality.
-
 
                 # SEARCH FOR QUERY AND PARSE RESULTS
                 for s in fi[q_id]:
@@ -732,11 +751,18 @@ class MergeAssemblies(Logging):
                     if (q_mapq > min_mapq) and (s.mapq > min_mapq):
 
                         hit_pos = ma.get_hit_pos(s)
-                        hit_pos = ma.round_bp_pos(hit_pos)
+                        #print hit_pos, ma.closest_starting_pos(R2_starts, hit_pos, R2_starts_len)
+                        hit_pos = ma.closest_starting_pos(R2_starts, hit_pos, R2_starts_len)
+                        #hit_pos = ma.round_bp_pos(hit_pos)
                         contig_2_contig_dict[query_pos].append(hit_pos)
 
-        print 'R1s associated:', len(contig_2_contig_dict.keys())
-        print 'R1s un-associated:', len(all_R1s.difference(set(contig_2_contig_dict.keys())))
+
+        # print 'R1s total count', len(all_R1s)
+        # print 'R1s associated:', len(contig_2_contig_dict.keys())
+        # print 'R1s un-associated:', len(all_R1s.difference(set(contig_2_contig_dict.keys())))
+        
+        # print 'R2s total count', R2_starts_len 
+        # print 'R2s associated:', len(set([item for sublist in contig_2_contig_dict.values() for item in sublist]))
 
 
         run_results["passed_filter"] = len(contig_2_contig_dict.keys())
