@@ -14,12 +14,13 @@ Add later.
 """
 
 import os
-import sys
+#import sys
 import gzip
 import pysam
 import bisect
+import logging
 import datetime
-import textwrap
+#import textwrap
 import collections
 # import numpy as np
 import cPickle as pickle
@@ -52,125 +53,131 @@ class SamLine(object):
             self.qual = line[10]
 
 
-class Logging(object):
-    """Class to hold logging methods."""
-    def __init__(self):
-        super(Logging, self).__init__()
+# class Logging(object):
+#     """Class to hold logging methods."""
+#     def __init__(self):
+#         super(Logging, self).__init__()
 
-        self.today = datetime.date.today()
-
-
-    def __make_READnome_log__(self, results_dict, path):
-
-        results_dict['contig_count'] = len(results_dict["seq_lengths"])
-        results_dict['mean_contig_len'] = sum(results_dict["seq_lengths"]) / float(len(results_dict["seq_lengths"]))
-
-        txt = """\
-        Ran 'makeREADnome' as {0[run_name]} on {0[date]}
-
-          Rainbow Assembly: {0[fin]}
-
-          Pseudo Genome: {0[fout]}
-
-          Length of N padding: {0[Ns]:g}
-
-        Basic Stats:
-
-          Total Contigs: {0[contig_count]:g}
-          Mean Contig length: {0[mean_contig_len]}
-
-        """.format(results_dict)
-
-        txt = textwrap.dedent(txt)
-        fin = os.path.split(results_dict["fin"])[-1]
-        outfile = self.today.strftime('makeREADnome.{}.%m%d%y.log'.format(fin))
-        outfile = os.path.join(path, outfile)
-        outfile = open(outfile, 'w')
-        outfile.write(txt)
-        outfile.close()
-        pass
-
-    def __associate_contigs_log__(self, results_dict, path):
-
-        results_dict["prop_asc"] = float(results_dict["passed_filter"]) / results_dict["total_queries"]
-
-        txt = """\
-        Ran 'ascContigs' on {0[date]}
-
-          Query file: {0[query_sam]}
-          Searched file: {0[searched_sam]}
-          Output Pickle file: {0[pickle]}
-
-          Minimum MAPQ value: {0[min_mapq]}
-
-        Results:
-
-          Total reads processed: {0[total_queries]}
-          Paired reads passing filter: {0[passed_filter]}
-          Unpaired R1s: {0[failed_filter]}
-
-        """.format(results_dict)
-
-        txt = textwrap.dedent(txt)
-
-        outfile = self.today.strftime('ascRADnom.%m%d%y.log')
-
-        outfile = os.path.join(path, outfile)
-        outfile = open(outfile, 'w')
-        outfile.write(txt)
-        outfile.close()
-        pass
+#         self.today = datetime.date.today()
 
 
-    def __contigs_2_RADnome__(self, results_dict, path):
+#     def __make_READnome_log__(self, results_dict, path):
 
-        results_dict["mean_unique_asc"] = float(results_dict["unique_associations"]) / results_dict['rad_frag_count']
-        results_dict["mode_diff"] = float(results_dict["mode_diff"]) / results_dict['potential_rad_frags']
+#         results_dict['contig_count'] = len(results_dict["seq_lengths"])
+#         results_dict['mean_contig_len'] = sum(results_dict["seq_lengths"]) / float(len(results_dict["seq_lengths"]))
 
-        txt = """\
-        Ran 'makeRADnome' as {0[run_name]} on {0[date]}
+#         txt = """\
+#         Ran 'makeREADnome' as {0[run_name]} on {0[date]}
 
-          R1 file: {0[R1]}
-            contig length: {0[R1_len]} bp
+#           Rainbow Assembly: {0[fin]}
 
-          R2 file: {0[R2]}
-            contig length: {0[R2_len]} bp
+#           Pseudo Genome: {0[fout]}
 
-          Output File: {0[fout]}
+#           Length of N padding: {0[Ns]:g}
 
-          Minimum proportion of reads contributing to mode: {0[proportion]}
+#         Basic Stats:
 
-          Padding between RADfrags: {0[N_padding]} bp
-          Padding between R1/R2 contigs: {0[insert_size]} bp
+#           Total Contigs: {0[contig_count]:g}
+#           Mean Contig length: {0[mean_contig_len]}
 
-        Counts:
+#         """.format(results_dict)
 
-            Total associated contigs: {0[associated_contigs]}
-            Total assembled contigs: {0[assembled_contigs]}
-            Total R1 singleton contigs: {0[R1_singletons]}
-            Total R2 singleton contigs: {0[R2_singletons]}
+#         txt = textwrap.dedent(txt)
+#         fin = os.path.split(results_dict["fin"])[-1]
+#         outfile = self.today.strftime('makeREADnome.{}.%m%d%y.log'.format(fin))
+#         outfile = os.path.join(path, outfile)
+#         outfile = open(outfile, 'w')
+#         outfile.write(txt)
+#         outfile.close()
+#         pass
 
-        Basic Stats:
+#     def __associate_contigs_log__(self, results_dict, path):
 
-          Tested RADfrags: {0[potential_rad_frags]:g}
-          Total Associated RADfrags: {0[rad_frag_count]}
-          Mean unique associations per RADfrag: {0[mean_unique_asc]:g}
-           (e.g., The mean number of R2 contigs associated with
-            a particular R1 contig.)
-          Mean proportion of reads contributing to mode: {0[mode_diff]:g}
+#         results_dict["prop_asc"] = float(results_dict["passed_filter"]) / results_dict["total_queries"]
 
-        """.format(results_dict)
+#         txt = """\
+#         Ran 'ascContigs' on {0[date]}
 
-        txt = textwrap.dedent(txt)
-        outfile = self.today.strftime('makeRADnome.%m%d%y.log')
-        outfile = os.path.join(path, outfile)
-        outfile = open(outfile, 'w')
-        outfile.write(txt)
-        outfile.close()
-        pass
+#           Query file: {0[query_sam]}
+#           Searched file: {0[searched_sam]}
+#           Output Pickle file: {0[pickle]}
+
+#           Minimum MAPQ value: {0[min_mapq]}
+
+#         Results:
+
+#           Total reads processed: {0[total_queries]}
+#           Paired reads passing filter: {0[passed_filter]}
+#           Unpaired R1s: {0[failed_filter]}
+
+#         """.format(results_dict)
+
+#         txt = textwrap.dedent(txt)
+
+#         outfile = self.today.strftime('ascRADnom.%m%d%y.log')
+
+#         outfile = os.path.join(path, outfile)
+#         outfile = open(outfile, 'w')
+#         outfile.write(txt)
+#         outfile.close()
+#         pass
 
 
-class GenerateRADnome(Logging):
+#     def __contigs_2_RADnome__(self, results_dict, path):
+
+#         results_dict["mean_unique_asc"] = float(results_dict["unique_associations"]) / results_dict['rad_frag_count']
+#         results_dict["mode_diff"] = float(results_dict["mode_diff"]) / results_dict['potential_rad_frags']
+
+#         txt = """\
+#         Ran 'makeRADnome' as {0[run_name]} on {0[date]}
+
+#           R1 file: {0[R1]}
+#             contig length: {0[R1_len]} bp
+
+#           R2 file: {0[R2]}
+#             contig length: {0[R2_len]} bp
+
+#           Output File: {0[fout]}
+
+#           Minimum proportion of reads contributing to mode: {0[proportion]}
+
+#           Padding between RADfrags: {0[N_padding]} bp
+#           Padding between R1/R2 contigs: {0[insert_size]} bp
+
+#         Counts:
+
+#             Total associated contigs: {0[associated_contigs]}
+#             Total assembled contigs: {0[assembled_contigs]}
+#             Total R1 singleton contigs: {0[R1_singletons]}
+#             Total R2 singleton contigs: {0[R2_singletons]}
+
+#         Basic Stats:
+
+#           Tested RADfrags: {0[potential_rad_frags]:g}
+#           Total Associated RADfrags: {0[rad_frag_count]}
+#           Mean unique associations per RADfrag: {0[mean_unique_asc]:g}
+#            (e.g., The mean number of R2 contigs associated with
+#             a particular R1 contig.)
+#           Mean proportion of reads contributing to mode: {0[mode_diff]:g}
+
+#         """.format(results_dict)
+
+#         txt = textwrap.dedent(txt)
+#         outfile = self.today.strftime('makeRADnome.%m%d%y.log')
+#         outfile = os.path.join(path, outfile)
+#         outfile = open(outfile, 'w')
+#         outfile.write(txt)
+#         outfile.close()
+#         pass
+
+class LogMixin(object):
+    @property
+    def logger(self):
+        name = '.'.join([__name__, self.__class__.__name__])
+        return logging.getLogger(name)
+
+
+class GenerateRADnome(LogMixin):
     """Docstring for GenerateRADGenome"""
     def __init__(self):
         super(GenerateRADnome, self).__init__()
@@ -212,6 +219,8 @@ class GenerateRADnome(Logging):
         """Provide input and output file names as well as the number of Ns to insert
            between contigs.
         """
+
+        self.logger.info('Create READnome from {}'.format(rainbow_clustered_fin))
 
         results_dict = {"date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
                         "fin": rainbow_clustered_fin,
@@ -273,13 +282,15 @@ class GenerateRADnome(Logging):
             fout.write("\n")
             fout.close()
 
-            self.__make_READnome_log__(results_dict, path)
+            #self.__make_READnome_log__(results_dict, path)
             return 1
 
     def make_READnome_from_Stacks_tsv(self, tsv_fin, pseudo_genome_fout, Ns, run_name, out_path=None):
         """Provide input and output file names as well as the number of Ns to insert
            between contigs.
         """
+
+        self.logger.info('Create READnome from {}'.format(tsv_fin))
 
         results_dict = {"date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
                         "fin": tsv_fin,
@@ -327,7 +338,7 @@ class GenerateRADnome(Logging):
             fout.write("\n")
             fout.close()
 
-            self.__make_READnome_log__(results_dict, path)
+            #self.__make_READnome_log__(results_dict, path)
             return 1
 
     def filter_contigs(self, c, p):
@@ -406,12 +417,74 @@ class GenerateRADnome(Logging):
         idx = n.index(min(n))
         return array[idx]
 
+    @staticmethod
+    def closest_starting_pos(positions, value, array_size):
+        
+        insert_point = bisect.bisect(positions, value)
+
+        if insert_point >= array_size:
+            return positions[insert_point-1]
+
+        else:
+
+            left, right = positions[insert_point-1], positions[insert_point]
+            
+            if abs(left - insert_point) > abs(right - insert_point):
+                return right
+            else:
+                return left
+
+    def create_RADnome_files(self, run_name, out_path=None):
+
+        RADnome_out = "{}.paired_contigs.fa".format(run_name)
+        Singltons_R1_nome_out = "{}.singleton_R1_contigs.fa".format(run_name)
+        Singltons_R2_nome_out = "{}.singleton_R2_contigs.fa".format(run_name)
+        Contig_nome_out = "{}.assembled_contigs.fa".format(run_name)
+
+        contig_positions_out = '{}.RADnome.contig_positions.txt'.format(run_name)
+
+        if out_path is not None:
+
+            RADnome_out = os.path.join(out_path, RADnome_out)
+            RADnome_out = open(RADnome_out, 'w')
+
+            Singltons_R1_nome_out = os.path.join(out_path, Singltons_R1_nome_out)
+            Singltons_R1_nome_out = open(Singltons_R1_nome_out, 'w')
+
+            Singltons_R2_nome_out = os.path.join(out_path, Singltons_R2_nome_out)
+            Singltons_R2_nome_out = open(Singltons_R2_nome_out, 'w')
+
+            Contig_nome_out = os.path.join(out_path, Contig_nome_out)
+            Contig_nome_out = open(Contig_nome_out, 'w')
+
+            contig_positions_out = os.path.join(out_path, contig_positions_out)
+            contig_positions_out = open(contig_positions_out, 'w')
+
+        else:
+
+            RADnome_out = open(RADnome_out, 'w')
+            Singltons_R1_nome_out = open(Singltons_R1_nome_out, 'w')
+            Singltons_R2_nome_out = open(Singltons_R2_nome_out, 'w')
+            Contig_nome_out = open(Contig_nome_out, 'w')
+            contig_positions_out = open(contig_positions_out, 'w')
+
+        return (RADnome_out, Singltons_R1_nome_out, Singltons_R2_nome_out, 
+                Contig_nome_out, contig_positions_out)
+
+
     def contigs_2_RADnome(self, rad1, rad2, r1_contig_len,
                           r2_contig_len, contig_2_contig_dict,
                           run_name, N_padding, insert_size,
                           proportion, overlap, out_path=None,
                           R2_starts='{}.R2.contig_start_pos.txt',
-                          remaining_R1s="{}.R1.contig_start_pos.no_pass.txt"):
+                          unassociated_R1s="{}.R1s.unassociated.txt",
+                          unassociated_R2s="{}.R2s.unassociated.txt"):
+
+        self.logger.info('Size of R1 contigs: {}'.format(r1_contig_len))
+        self.logger.info('Size of R2 contigs: {}'.format(r2_contig_len))
+        self.logger.info('Number of bp of padding between contigs: {}'.format(N_padding))
+        self.logger.info('Number of bp of padding between associated R1 an R2 contigs: {}'.format(insert_size))
+        self.logger.info('Proportion of associated reads aligning to contig necessary associate contig: {}'.format(proportion))
 
         C = ContigAssembler()
         run_results = {
@@ -442,40 +515,10 @@ class GenerateRADnome(Logging):
         r1 = pysam.Fastafile(rad1)
         r2 = pysam.Fastafile(rad2)
 
-        # MAKE OUTPUT FILENAMES
-        RADnome_out = run_name + ".paired_contigs.fa"
-        Singltons_R1_nome_out = run_name + ".singleton_R1_contigs.fa"
-        Singltons_R2_nome_out = run_name + ".singleton_R2_contigs.fa"
-        Contig_nome_out = run_name + ".assembled_contigs.fa"
-
-        contig_positions_out = run_name + '.RADnome.contig_positions.txt'
-
-        run_results['RADnome_out'] = RADnome_out
-
-        if out_path is not None:
-
-            RADnome_out = os.path.join(out_path, RADnome_out)
-            RADnome_out = open(RADnome_out, 'w')
-
-            Singltons_R1_nome_out = os.path.join(out_path, Singltons_R1_nome_out)
-            Singltons_R1_nome_out = open(Singltons_R1_nome_out, 'w')
-
-            Singltons_R2_nome_out = os.path.join(out_path, Singltons_R2_nome_out)
-            Singltons_R2_nome_out = open(Singltons_R2_nome_out, 'w')
-
-            Contig_nome_out = os.path.join(out_path, Contig_nome_out)
-            Contig_nome_out = open(Contig_nome_out, 'w')
-
-            contig_positions_out = os.path.join(out_path, contig_positions_out)
-            contig_positions_out = open(contig_positions_out, 'w')
-
-        else:
-
-            RADnome_out = open(RADnome_out, 'w')
-            Singltons_R1_nome_out = open(Singltons_R1_nome_out, 'w')
-            Singltons_R2_nome_out = open(Singltons_R2_nome_out, 'w')
-            Contig_nome_out = open(Contig_nome_out, 'w')
-            contig_positions_out = open(contig_positions_out, 'w')
+        # MAKE OUTPUT FILES
+        RADnome_out, Singltons_R1_nome_out, Singltons_R2_nome_out, \
+        Contig_nome_out, contig_positions_out = self.create_RADnome_files(run_name, out_path=None)
+        #run_results['RADnome_out'] = RADnome_out
 
         c2c = pickle.load(open(contig_2_contig_dict, 'rb'))
 
@@ -485,7 +528,12 @@ class GenerateRADnome(Logging):
         singletons_pos_R1 = 0
         contigs_pos = 0
         seq_start = 1
-        r2_unassociated_contigs = []
+
+        unassociated_R1s = set([int(l.strip()) for l in open(unassociated_R1s.format(run_name), 'rU')])
+        unassociated_R2s = set([int(l.strip()) for l in open(unassociated_R2s.format(run_name), 'rU')])
+
+        R2_starts = [int(l.strip()) for l in open(R2_starts.format(run_name), 'rU')]
+
         r2_assoicated_contigs = []
 
         contignome_current_position = 0
@@ -493,12 +541,9 @@ class GenerateRADnome(Logging):
         r1_current_position = 0
         r2_current_position = 0
 
-        R2_starts = R2_starts.format(run_name)
-        R2_starts = tuple(int(i.strip()) for i in open(R2_starts,'rU'))
-
-
         # ITERATE OVER R1 CONTIG KEYS IN CONTIG-2-CONTIG DICTIONARY
-        for key, value in c2c.iteritems():
+        for count, pair in enumerate(c2c.iteritems()):
+            key, value = pair
             run_results["potential_rad_frags"] += 1
 
             if key == 0:           # skip zero key as this may be where 'unalignable fragments' get put.
@@ -512,10 +557,10 @@ class GenerateRADnome(Logging):
             # WRITE FASTA HEADER
             if count == 0:
 
-                RADnome_out.write('>{}_NonOverlapping\n'.format(run_name))
-                Contig_nome_out.write('>{}_Assembled\n'.format(run_name))
-                Singltons_R1_nome_out.write('>{}_R1_Singletons\n'.format(run_name))
-                Singltons_R2_nome_out.write('>{}_R2_Singletons\n'.format(run_name))
+                RADnome_out.write('>{}_Associated_Contigs\n'.format(run_name))
+                Contig_nome_out.write('>{}_Assembled_Contigs\n'.format(run_name))
+                Singltons_R1_nome_out.write('>{}_R1_Singleton_Contigs\n'.format(run_name))
+                Singltons_R2_nome_out.write('>{}_R2_Singleton_Contigs\n'.format(run_name))
 
             # ASSOCIATE CONTIG PAIRS
             if self.filter_contigs(counts, proportion) >= proportion:
@@ -534,15 +579,12 @@ class GenerateRADnome(Logging):
                 r2_assoicated_contigs.append(contig2)
 
                 if len(counts.keys()) > 1:
+    
+                    non_mode_contigs = counts.keys()
+                    non_mode_contigs.remove(mode[0])
+                    non_mode_contigs = [self.__find_nearest__(R2_starts, s) for s in non_mode_contigs]
+                    unassociated_R2s.update(non_mode_contigs)
 
-                    try:
-                        non_mode_contigs = counts.keys()
-                        non_mode_contigs.remove(mode[0])
-                        non_mode_contigs = [self.__find_nearest__(R2_starts, s) for s in non_mode_contigs]
-                        r2_unassociated_contigs.extend(non_mode_contigs)
-
-                    except:
-                        pass
 
                 # RAINBOW orientation is reversed for the R1 reads
                 # so it is necessary to flip contig1's oriention
@@ -582,29 +624,14 @@ class GenerateRADnome(Logging):
             # PROCESS R1s
             else:
 
-                r2_unassociated_contigs.extend(counts.keys()) # update R2 ids
-
-                bigNs = "N" * N_padding
-                contig1 = r1.fetch(r1_name, key, key+r1_contig_len)
-
-                pos1 = self._append_to_pseudo_genome_(bigNs, Singltons_R1_nome_out, singletons_pos_R1, span=80)
-                pos2 = self._append_to_pseudo_genome_(contig1, Singltons_R1_nome_out, pos1, span=80)
-
-                r1_current_position = self.write_contig_start_stop_info(contig_positions_out, run_name, r1_current_position, (bigNs, contig1), 'R1nome')
-
-                singletons_pos_R1 = pos2
-                run_results["R1_singletons"] += 1
+                unassociated_R1s.update([key])
+                unassociated_R2s.update(list(counts.keys())) # update R2 ids
 
             count += 1
 
-        # print 'un-associated R2s', len(r2_unassociated_contigs), len(set(r2_unassociated_contigs))
-        # print 'associated R2s', len(r2_assoicated_contigs), len(set(r2_assoicated_contigs))
-
-        # print 'set dif', len(list(set(r2_unassociated_contigs) - set(r2_assoicated_contigs)))
-
         # PROCESS REMAINING R1s
         #remaining_R1s = "{}.R1.contig_start_pos.no_pass.txt"
-        for start in open(remaining_R1s.format(run_name),'r'):
+        for start in unassociated_R1s:
 
             start = int(start)
             contig1 = r1.fetch(r1_name, start, start+r1_contig_len)
@@ -614,13 +641,14 @@ class GenerateRADnome(Logging):
             r1_current_position = self.write_contig_start_stop_info(contig_positions_out, run_name, r1_current_position, (bigNs, contig1), 'R1nome')
 
             singletons_pos_R1 = pos2
-            run_results["R1_singletons"] += 1
+            # run_results["R1_singletons"] += 1
 
         # PROCESS R2s
         singletons_pos_R2 = 0
-        r2_unassociated_contigs = set(r2_unassociated_contigs)
+        # r2_unassociated_contigs = set(r2_unassociated_contigs)
 
-        for c in r2_unassociated_contigs:
+        for start in unassociated_R2s:
+            contig1 = r2.fetch(r2_name, start, start+r2_contig_len)
             pos1 = self._append_to_pseudo_genome_(bigNs, Singltons_R2_nome_out, singletons_pos_R2, span=80)
             pos2 = self._append_to_pseudo_genome_(contig1, Singltons_R2_nome_out, pos1, span=80)
 
@@ -628,7 +656,8 @@ class GenerateRADnome(Logging):
 
             singletons_pos_R2 = pos2
 
-        run_results["R2_singletons"] = len(r2_unassociated_contigs)
+        run_results["R1_singletons"] = len(unassociated_R1s)
+        run_results["R2_singletons"] = len(unassociated_R2s)
 
         Singltons_R1_nome_out.write("\n")
         Singltons_R2_nome_out.write("\n")
@@ -640,15 +669,10 @@ class GenerateRADnome(Logging):
         Contig_nome_out.close()
         RADnome_out.close()
 
-        # Send data for logging
-        if out_path == None:
-            out_path = os.getcwd()
-
-        self.__contigs_2_RADnome__(run_results, out_path)
         return 1
 
 
-class MergeAssemblies(Logging):
+class MergeAssemblies(LogMixin):
     """docstring for MergeAssemblies"""
     def __init__(self):
         super(MergeAssemblies, self).__init__()
@@ -685,21 +709,19 @@ class MergeAssemblies(Logging):
             else:
                 return left
 
-    def associate_contigs(self, bam1, sam2, min_mapq, run_ID, R1_starts=None, R2_starts=None):
+    def create_unassociated_contigs_file(self, array, path, run_ID, read_set):
+
+        unassociated_reads = os.path.join(path, "{}.{}.unassociated.txt".format(run_ID, read_set))
+        unassociated_reads = open(unassociated_reads, 'w')
+        [unassociated_reads.write("{}\n".format(p)) for p in array]
+        unassociated_reads.close()
+        return True
+
+
+    def associate_contigs(self, bam1, sam2, min_mapq, run_ID, 
+                          R1_starts=None, R2_starts=None):
         # print bam1, sam2, min_mapq, run_ID
         # sys.exit()
-
-        run_results = {
-            "total_queries": 0,
-            "passed_filter": 0,
-            "date": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
-            "min_mapq": min_mapq,
-            "query_sam": bam1,
-            "searched_sam": sam2,
-            # "contig_positions": contig_positions,
-            "pickle": None,
-            "failed_filter":0,
-            }
 
         contig_2_contig_dict = defaultdict(list)
 
@@ -723,9 +745,6 @@ class MergeAssemblies(Logging):
 
         R2_starts_len = len(set(R2_starts))
 
-        low_depth_R1_starts = os.path.join(path, "{}.R1.contig_start_pos.no_pass.txt".format(run_ID))
-        low_depth_R1_starts = open(low_depth_R1_starts, 'w')
-
         all_R1s = set()
 
         # ITERATE OVER START POSITIONS
@@ -736,10 +755,7 @@ class MergeAssemblies(Logging):
             if query_pos is 0:
                 continue
 
-            #print "{}.R1".format(run_ID), query_pos-5, query_pos+5
-            # samtools view alignments/Trachs_Merged.1.fq.sorted.bam Trachs_Merged_stacks.R1:590-600
             reads = R1_sam.fetch("{}.R1".format(run_ID), query_pos-5, query_pos+5)
-            #reads = [r for r in reads]                  # unpack interator
 
             for q in reads:
                 q_id = q.qname[:-1] + "2"               # create query id (e.g., ends with "2")
@@ -751,41 +767,31 @@ class MergeAssemblies(Logging):
                     if (q_mapq > min_mapq) and (s.mapq > min_mapq):
 
                         hit_pos = ma.get_hit_pos(s)
-                        #print hit_pos, ma.closest_starting_pos(R2_starts, hit_pos, R2_starts_len)
                         hit_pos = ma.closest_starting_pos(R2_starts, hit_pos, R2_starts_len)
                         #hit_pos = ma.round_bp_pos(hit_pos)
                         contig_2_contig_dict[query_pos].append(hit_pos)
 
+        R2s_asc = set([item for sublist in contig_2_contig_dict.values() for item in sublist])
 
-        # print 'R1s total count', len(all_R1s)
-        # print 'R1s associated:', len(contig_2_contig_dict.keys())
-        # print 'R1s un-associated:', len(all_R1s.difference(set(contig_2_contig_dict.keys())))
-        
-        # print 'R2s total count', R2_starts_len 
-        # print 'R2s associated:', len(set([item for sublist in contig_2_contig_dict.values() for item in sublist]))
-
-
-        run_results["passed_filter"] = len(contig_2_contig_dict.keys())
-
+        # CREATE UNASSOCIATED OUTPUT FILES
         unassociated_R1s = all_R1s.difference(set(contig_2_contig_dict.keys()))
-        run_results["failed_filter"] = len(unassociated_R1s)
-
-        [low_depth_R1_starts.write("{}\n".format(p)) for p in unassociated_R1s]
-
-        #CREATE PICKLE OUTPUT FILE
-        today = datetime.date.today()
+        unassociated_R2s = set(R2_starts) - R2s_asc
+        self.create_unassociated_contigs_file(unassociated_R1s, path, run_ID, read_set='R1s')
+        self.create_unassociated_contigs_file(unassociated_R2s, path, run_ID, read_set='R2s')
 
         path = os.path.split(bam1)[0]
         pkl_output_file_name = os.path.join(path, '{}.R1_to_R2_contig_associations.pkl'.format(run_ID))
         pkl_out = open(pkl_output_file_name, 'wb')
         pickle.dump(contig_2_contig_dict, pkl_out)
 
-        low_depth_R1_starts.close()
+        # LOG ASSOICATION RESULTS
+        self.logger.info('R1s total count: {}'.format(len(all_R1s)))
+        self.logger.info('R1s associated: {}'.format(len(contig_2_contig_dict.keys())))
+        self.logger.info('R1s un-associated {}'.format(len(all_R1s.difference(set(contig_2_contig_dict.keys())))))
 
-        # UPDATE RUN RESULTS AND GENERATE LOGFILE
-        run_results["total_queries"] = count
-        run_results['pickle'] = pkl_output_file_name
-        self.__associate_contigs_log__(run_results, path)        # format logging results
+        self.logger.info('R2s total count: {}'.format(R2_starts_len))
+        self.logger.info('R2s associated: {}'.format(len(R2s_asc)))
+        self.logger.info('R2s un-associated {}'.format(len(set(R2_starts) - R2s_asc)))
         return 1
 
     def __generate_test_data__(self, bam1, sam2, contig_positions, min_mapq):
@@ -910,15 +916,5 @@ class ContigAssembler(object):
 
 
 if __name__ == '__main__':
-    G = GenerateRADnome()
-
-    tsv_fin ="/Users/ngcrawford/Dropbox/JMP_CAS/Nick/Stacks_output/batch_1.catalog.tags_R2.tsv"
-    pseudo_genome_fout = 'stacksnome.fa'
-    Ns = 500
-    run_name = 'test_run'
-
-    G.make_READnome_from_Stacks_tsv(tsv_fin, pseudo_genome_fout, Ns, run_name)
-
-
     pass
 
