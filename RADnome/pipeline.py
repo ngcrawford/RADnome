@@ -307,6 +307,8 @@ class RunPipeline(object):
         a = [shutil.move(f, 'fastas/') for f in glob.glob('*.fai')]
         a = [shutil.move(f, 'fastas/') for f in glob.glob('*.contig_start*')]
         a = [shutil.move(f, 'fastas/') for f in glob.glob('*.pkl')]
+        a = [shutil.move(f, 'fastas/') for f in glob.glob('*.unassociated.*')]
+        a = [shutil.move(f, 'fastas/') for f in glob.glob('*.contig_positions.*')]
 
         if os.path.exists('rainbow/') is False:
             os.mkdir("rainbow")
@@ -322,23 +324,39 @@ class RunPipeline(object):
     def pipeline(self, fq1, fq2, run_ID, N_padding, insert_size,
                      proportion, overlap, cores, stacks_contigs):
 
-        #print fq1, fq2, run_ID, N_padding, insert_size, proportion, overlap, cores, stacks_contigs
+        logging.basicConfig(level=logging.INFO, filename='example.log',
+                            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+        # logger = logging.getLogger(__name__)
+        # logger.setLevel(logging.INFO)
+
+        # handler = logging.FileHandler('example.log')
+        # handler.setLevel(logging.INFO)
+
+        # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        # handler.setFormatter(formatter)
+
+        # logger.addHandler(handler)
 
         if stacks_contigs is None:
             # -----------
             # Run Rainbow
             # -----------
 
-            sys.stdout.write("""Generating RADnome: '{0}' on {1}\n\n""".format(run_ID, datetime.date.today()))
+            logging.info("Creating RADnome: '{0}' on {1}".format(run_ID, datetime.date.today()))
+            sys.stdout.write("Creating RADnome: '{0}' on {1}\n\n".format(run_ID, datetime.date.today()))
 
+            logging.info("Step 1: Running Rainbow Cluster")
             sys.stdout.write("Step 1: Running Rainbow Cluster ...\n")
             self.run_cluster_cmd(fq1)
             self.run_cluster_cmd(fq2)
 
+            logging.info("Step 2: Running Rainbow Div")
             sys.stdout.write("Step 2: Running Rainbow Div ...\n")
             self.run_div_cmd(fq1)
             self.run_div_cmd(fq2)
 
+            logging.info("Step 3: Running Rainbow Merge")
             sys.stdout.write("Step 3: Running Rainbow Merge ...\n")
             self.run_merge_cmd(fq1)
             self.run_merge_cmd(fq2)
@@ -347,6 +365,7 @@ class RunPipeline(object):
             # Generate READnomes
             # ------------------
 
+            logging.info("Step 4: Creating R1 and R2 READnomes")
             sys.stdout.write("Step 4: Creating R1 and R2 READnomes ...\n")
 
             self.make_READnome(fq1, "{}.R1".format(run_ID))
@@ -354,6 +373,7 @@ class RunPipeline(object):
 
         else:
 
+            logging.info("Steps 1-4: Creating R1 and R2 READnomes from stacks tsv files")
             sys.stdout.write("Steps 1-4: Creating R1 and R2 READnomes\n           from stacks tsv files ...\n")
 
             self.make_READnome_from_Stacks_tsv(stacks_contigs[0], fq1, "{}.R1".format(run_ID))
@@ -364,6 +384,7 @@ class RunPipeline(object):
         # Bowtie contig associtations, etc.
         # ---------------------------------
 
+        logging.info("Step 5: Running Bowtie2 on {0} and {1}".format(fq1, fq2))
         sys.stdout.write("Step 5: Running Bowtie2 ...\n")
 
         sys.stdout.write("  .. aligning {}\n".format(fq1))
@@ -372,18 +393,22 @@ class RunPipeline(object):
         sys.stdout.write("  .. aligning {}\n".format(fq2))
         self.run_bowtie2(fq2, cores)
 
-
+        logging.info("Step 6: Creating sorted BAMs")
         sys.stdout.write("Step 6: Creating sorted BAMs ...\n")
         self.sam_to_sorted_sam(fq1)
         self.sam_to_sorted_sam(fq2)
 
+        logging.info("Step 7: Associating contigs")
         sys.stdout.write("Step 7: Associating contigs ...\n")
         self.ascContigs(fq1, fq2, run_ID, min_depth=1, min_mapq=3)
 
+        logging.info("Step 8: Create RADnome")
         sys.stdout.write("Step 8: Create RADnome ...\n")
         self.make_RADnome(fq1, fq2, run_ID, N_padding,
                           insert_size, proportion, overlap,)
         self.merge_fastas(run_ID)
 
+        logging.info("Step 9: Organize directory")
         sys.stdout.write("Step 9: Organize directory ...\n")
         self.tidy_dir(fq1, run_ID)
+
