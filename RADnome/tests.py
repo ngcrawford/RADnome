@@ -9,10 +9,9 @@ sys.path.insert(0, os.path.abspath('..'))  # Seriously Python?! This is fucking 
 import glob
 import shlex
 import shutil
-
 import unittest
-from subprocess import Popen, PIPE
 import pipeline
+from subprocess import Popen, PIPE
 from RADnome import GenerateRADnome
 
 
@@ -47,8 +46,6 @@ class TestCmds(unittest.TestCase):
                           stdin=PIPE,
                           stdout=PIPE,
                           stderr=PIPE).communicate()
-
-        print os.getcwd()
 
         # Make tmp dir (TO DO redo with 'real' tempdir)
         os.mkdir(os.path.join(self.base_dir, "tests/data/tmp"))
@@ -103,8 +100,8 @@ class TestCmds(unittest.TestCase):
 
         bam1 = os.path.join(self.test_data, "data/alignments/fq1.10k.fq.sorted.bam")
         sam2 = os.path.join(self.test_data, "data/alignments/fq2.10k.fq.sorted.sam")
-        R1_starts = os.path.join(self.test_data, "data/alignments/test_run.R1.contig_start_pos.txt")
-        R2_starts = os.path.join(self.test_data, "data/alignments/test_run.R2.contig_start_pos.txt")
+        R1_starts = os.path.join(self.test_data, "data/fastas/test_run.R1.contig_start_pos.txt")
+        R2_starts = os.path.join(self.test_data, "data/fastas/test_run.R2.contig_start_pos.txt")
 
         run_ID = self.run_ID
         min_mapq = self.min_mapq
@@ -129,8 +126,10 @@ class TestCmds(unittest.TestCase):
         r2_contig_len = seq_len(os.path.join(self.test_data, "data/fq2.10k.fq"))
         contig_2_contig_dict = os.path.join(self.test_data, "data/fastas/test_run.R1_to_R2_contig_associations.pkl")
 
-        R2_starts = os.path.join(self.test_data, 'data/alignments/{}.R2.contig_start_pos.txt')
-        remaining_R1s = os.path.join(self.test_data, 'data/alignments/{}.R1.contig_start_pos.no_pass.txt')
+        R2_starts = os.path.join(self.test_data, 'data/fastas/{}.R2.contig_start_pos.txt')
+        remaining_R1s = os.path.join(self.test_data, 'data/fastas/{}.R1s.unassociated.txt')
+        remaining_R2s = os.path.join(self.test_data, 'data/fastas/{}.R2s.unassociated.txt')
+        
         run_name = self.run_ID
         N_padding = 500
         insert_size = 50
@@ -151,7 +150,8 @@ class TestCmds(unittest.TestCase):
                                      overlap,
                                      out_path,
                                      R2_starts,
-                                     remaining_R1s)
+                                     remaining_R1s,
+                                     remaining_R2s)
         self.assertTrue(z)
 
 
@@ -211,17 +211,17 @@ class TestPipeline(unittest.TestCase):
         self.assertEqual(results, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1])
 
 
-    # def tearDown(self):
-    #     """Remove intermediate files from test/data directory."""
+    def tearDown(self):
+        """Remove intermediate files from test/data directory."""
 
-    #     files = os.path.join(self.test_data, "*.txt")
-    #     [os.remove(p) for p in glob.glob(files)]
+        files = os.path.join(self.test_data, "*.txt")
+        [os.remove(p) for p in glob.glob(files)]
 
-    #     files = os.path.join(self.test_data, "fq*.10k.fq.*")
-    #     [os.remove(p) for p in glob.glob(files)]
+        files = os.path.join(self.test_data, "fq*.10k.fq.*")
+        [os.remove(p) for p in glob.glob(files)]
 
-    #     files = os.path.join(self.test_data, "{}*".format(self.run_ID))
-    #     [os.remove(p) for p in glob.glob(files)]
+        files = os.path.join(self.test_data, "{}*".format(self.run_ID))
+        [os.remove(p) for p in glob.glob(files)]
 
 if __name__ == '__main__':
     unittest.main()
